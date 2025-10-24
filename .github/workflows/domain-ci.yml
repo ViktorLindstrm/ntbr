@@ -18,8 +18,8 @@ env:
   OTP_VERSION: '27.0'
 
 jobs:
-  test:
-    name: Test (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+  quality:
+    name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
 
     strategy:
@@ -66,9 +66,6 @@ jobs:
       - name: Compile with warnings as errors
         run: mix compile --warnings-as-errors
 
-      - name: Run tests
-        run: mix test
-
       - name: Run Credo
         run: mix credo --strict
 
@@ -88,13 +85,132 @@ jobs:
       - name: Run Dialyzer
         run: mix dialyzer
 
-  coverage:
-    name: Code Coverage
+  unit-tests:
+    name: Unit Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
 
     defaults:
       run:
         working-directory: domain
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            domain/deps
+            domain/_build
+          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run unit tests (exclude property tests)
+        run: mix test --exclude property
+
+  property-tests:
+    name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: domain
+
+    env:
+      # PropCheck configuration for CI - more thorough than local development
+      PROPCHECK_NUMTESTS: 500
+      PROPCHECK_VERBOSE: true
+      PROPCHECK_SEARCH_STEPS: 100000
+      # Use deterministic seed for reproducibility (can be overridden)
+      PROPCHECK_SEED: ${{ github.run_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            domain/deps
+            domain/_build
+          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run property-based tests
+        run: mix test --only property --max-failures 1
+        continue-on-error: false
+
+      - name: Upload PropCheck counterexamples
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: propcheck-counterexamples-${{ github.run_id }}
+          path: |
+            domain/.propcheck
+            domain/counterexample.*.erl
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload property test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: property-test-reports-${{ github.run_id }}
+          path: domain/_build/test/lib/ntbr_domain/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: domain
+
+    env:
+      # Use fewer iterations for coverage to keep runtime reasonable
+      PROPCHECK_NUMTESTS: 100
 
     steps:
       - name: Checkout code
@@ -119,7 +235,7 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Run tests with coverage
+      - name: Run tests with coverage (including property tests)
         run: mix coveralls.html
 
       - name: Upload coverage report
