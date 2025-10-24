@@ -1,0 +1,261 @@
+name: Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'core/**'
+      - 'config/**'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'core/**'
+      - 'config/**'
+      - '.github/workflows/web-ci.yml'
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: '1.18'
+  OTP_VERSION: '27.0'
+
+jobs:
+  quality:
+    name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install core dependencies
+        working-directory: core
+        run: mix deps.get
+
+      - name: Compile core
+        working-directory: core
+        run: mix compile
+
+      - name: Install web dependencies
+        working-directory: web
+        run: mix deps.get
+
+      - name: Set up Node.js for assets
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup assets
+        working-directory: web
+        run: mix assets.setup
+
+      - name: Build assets
+        working-directory: web
+        run: mix assets.build
+
+      - name: Check formatting
+        working-directory: web
+        run: mix format --check-formatted
+
+      - name: Compile with warnings as errors
+        working-directory: web
+        run: mix compile --warnings-as-errors
+
+      - name: Run Credo
+        working-directory: web
+        run: mix credo --strict
+
+      - name: Restore PLT cache
+        uses: actions/cache@v4
+        id: plt-cache
+        with:
+          path: web/priv/plts
+          key: ${{ runner.os }}-web-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        working-directory: web
+        run: mix dialyzer --plt
+
+      - name: Run Dialyzer
+        working-directory: web
+        run: mix dialyzer
+
+  tests:
+    name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    env:
+      # PropCheck configuration for CI - stateful LiveView tests are expensive
+      PROPCHECK_NUMTESTS: 300
+      PROPCHECK_VERBOSE: true
+      PROPCHECK_SEARCH_STEPS: 100000
+      # Use deterministic seed for reproducibility
+      PROPCHECK_SEED: ${{ github.run_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install core dependencies
+        working-directory: core
+        run: mix deps.get
+
+      - name: Compile core
+        working-directory: core
+        run: mix compile
+
+      - name: Install web dependencies
+        working-directory: web
+        run: mix deps.get
+
+      - name: Set up Node.js for assets
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup and build assets
+        working-directory: web
+        run: |
+          mix assets.setup
+          mix assets.build
+
+      - name: Compile
+        working-directory: web
+        run: mix compile --warnings-as-errors
+
+      - name: Run all property-based tests
+        working-directory: web
+        run: |
+          echo "======================================"
+          echo "Running Property-Based Test Suite"
+          echo "Configuration:"
+          echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
+          echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
+          echo "  - Seed: $PROPCHECK_SEED"
+          echo "======================================"
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            echo ""
+            echo "======================================"
+            echo "❌ TESTS FAILED"
+            echo "======================================"
+            exit 1
+          }
+          echo ""
+          echo "======================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "======================================"
+
+      - name: Upload PropCheck counterexamples
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: propcheck-counterexamples-web-${{ github.run_id }}
+          path: |
+            web/.propcheck
+            web/counterexample.*.erl
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-web-${{ github.run_id }}
+          path: web/_build/test/lib/web/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  assets:
+    name: Assets Build Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-web-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Install dependencies
+        working-directory: web
+        run: mix deps.get
+
+      - name: Setup and build assets for production
+        working-directory: web
+        run: |
+          mix assets.setup
+          mix assets.deploy
+
+      - name: Verify assets were built
+        run: |
+          if [ ! -d "web/priv/static/assets" ]; then
+            echo "Assets directory not found!"
+            exit 1
+          fi
+          echo "Assets built successfully"

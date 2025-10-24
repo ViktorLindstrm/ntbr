@@ -1,0 +1,226 @@
+name: Domain CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'domain/**'
+      - '.github/workflows/domain-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'domain/**'
+      - '.github/workflows/domain-ci.yml'
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: '1.18'
+  OTP_VERSION: '27.0'
+
+jobs:
+  quality:
+    name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: domain
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            domain/deps
+            domain/_build
+          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+
+      - name: Run Credo
+        run: mix credo --strict
+
+      - name: Restore PLT cache
+        uses: actions/cache@v4
+        id: plt-cache
+        with:
+          path: domain/priv/plts
+          key: ${{ runner.os }}-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt
+
+      - name: Run Dialyzer
+        run: mix dialyzer
+
+  tests:
+    name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: domain
+
+    env:
+      # PropCheck configuration for CI - thorough property-based testing
+      PROPCHECK_NUMTESTS: 500
+      PROPCHECK_VERBOSE: true
+      PROPCHECK_SEARCH_STEPS: 100000
+      # Use deterministic seed for reproducibility
+      PROPCHECK_SEED: ${{ github.run_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            domain/deps
+            domain/_build
+          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run all property-based tests
+        run: |
+          echo "======================================"
+          echo "Running Property-Based Test Suite"
+          echo "Configuration:"
+          echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
+          echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
+          echo "  - Seed: $PROPCHECK_SEED"
+          echo "======================================"
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            echo ""
+            echo "======================================"
+            echo "❌ TESTS FAILED"
+            echo "======================================"
+            exit 1
+          }
+          echo ""
+          echo "======================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "======================================"
+
+      - name: Upload PropCheck counterexamples
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: propcheck-counterexamples-domain-${{ github.run_id }}
+          path: |
+            domain/.propcheck
+            domain/counterexample.*.erl
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-domain-${{ github.run_id }}
+          path: domain/_build/test/lib/ntbr_domain/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    defaults:
+      run:
+        working-directory: domain
+
+    env:
+      # Use same configuration as test job for accurate coverage
+      PROPCHECK_NUMTESTS: 500
+      PROPCHECK_VERBOSE: true
+      PROPCHECK_SEARCH_STEPS: 100000
+      PROPCHECK_SEED: ${{ github.run_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            domain/deps
+            domain/_build
+          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('domain/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Run tests with coverage
+        run: |
+          echo "Running property-based tests with coverage analysis..."
+          mix coveralls.html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-domain
+          path: domain/cover/
+          retention-days: 7

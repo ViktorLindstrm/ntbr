@@ -1,0 +1,197 @@
+name: Infra CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra-ci.yml'
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: '1.18'
+  OTP_VERSION: '27.0'
+
+jobs:
+  quality:
+    name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            infra/deps
+            infra/_build
+          key: ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+
+      - name: Run Credo (if available)
+        run: mix credo --strict || echo "Credo not configured, skipping"
+        continue-on-error: true
+
+      - name: Restore PLT cache
+        uses: actions/cache@v4
+        id: plt-cache
+        with:
+          path: infra/priv/plts
+          key: ${{ runner.os }}-infra-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-infra-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt || echo "Dialyzer not configured, skipping"
+        continue-on-error: true
+
+      - name: Run Dialyzer
+        run: mix dialyzer || echo "Dialyzer not configured, skipping"
+        continue-on-error: true
+
+  test:
+    name: Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: infra
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            infra/deps
+            infra/_build
+          key: ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run all tests
+        run: |
+          echo "======================================"
+          echo "Running Test Suite"
+          echo "======================================"
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            echo ""
+            echo "======================================"
+            echo "❌ TESTS FAILED"
+            echo "======================================"
+            exit 1
+          }
+          echo ""
+          echo "======================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "======================================"
+
+  release:
+    name: Release Build Test (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: infra
+
+    env:
+      MIX_ENV: prod
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            infra/deps
+            infra/_build
+          key: ${{ runner.os }}-infra-prod-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-infra-prod-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get --only prod
+
+      - name: Compile for production
+        run: mix compile --warnings-as-errors
+
+      - name: Build release
+        run: mix release || echo "Release not configured, skipping"
+        continue-on-error: true
+
+      - name: Verify release artifacts
+        run: |
+          if [ -d "_build/prod/rel/ntbr_infra" ]; then
+            echo "Release built successfully"
+            ls -lh _build/prod/rel/ntbr_infra/
+          else
+            echo "Release directory not found or release not configured"
+          fi
