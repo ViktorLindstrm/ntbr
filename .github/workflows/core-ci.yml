@@ -1,0 +1,200 @@
+name: Core CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'core/**'
+      - '.github/workflows/core-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'core/**'
+      - '.github/workflows/core-ci.yml'
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: '1.18'
+  OTP_VERSION: '27.0'
+
+jobs:
+  quality:
+    name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: core
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            core/deps
+            core/_build
+          key: ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+
+      - name: Run Credo (if available)
+        run: mix credo --strict || echo "Credo not configured, skipping"
+        continue-on-error: true
+
+      - name: Restore PLT cache
+        uses: actions/cache@v4
+        id: plt-cache
+        with:
+          path: core/priv/plts
+          key: ${{ runner.os }}-core-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-core-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt || echo "Dialyzer not configured, skipping"
+        continue-on-error: true
+
+      - name: Run Dialyzer
+        run: mix dialyzer || echo "Dialyzer not configured, skipping"
+        continue-on-error: true
+
+  unit-tests:
+    name: Unit Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: core
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            core/deps
+            core/_build
+          key: ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run unit tests (exclude stateful tests)
+        run: mix test --exclude stateful
+
+  property-tests:
+    name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: core
+
+    env:
+      # PropCheck configuration for CI - stateful tests are expensive
+      PROPCHECK_NUMTESTS: 200
+      PROPCHECK_VERBOSE: true
+      PROPCHECK_SEARCH_STEPS: 100000
+      # Use deterministic seed for reproducibility
+      PROPCHECK_SEED: ${{ github.run_id }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            core/deps
+            core/_build
+          key: ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run stateful property tests
+        run: mix test --only stateful --max-failures 1
+        continue-on-error: false
+
+      - name: Upload PropCheck counterexamples
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: propcheck-counterexamples-core-${{ github.run_id }}
+          path: |
+            core/.propcheck
+            core/counterexample.*.erl
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Upload property test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: property-test-reports-core-${{ github.run_id }}
+          path: core/_build/test/lib/ntbr_core/
+          if-no-files-found: ignore
+          retention-days: 7

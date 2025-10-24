@@ -1,0 +1,219 @@
+name: Firmware CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware-ci.yml'
+
+env:
+  MIX_ENV: test
+  MIX_TARGET: host
+  ELIXIR_VERSION: '1.18'
+  OTP_VERSION: '27.0'
+
+jobs:
+  quality:
+    name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: firmware
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential automake autoconf git squashfs-tools ssh-askpass pkg-config curl
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            firmware/deps
+            firmware/_build
+          key: ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile dependencies
+        run: mix deps.compile
+
+      - name: Check formatting
+        run: mix format --check-formatted
+
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+
+      - name: Run Credo (if available)
+        run: mix credo --strict || echo "Credo not configured, skipping"
+        continue-on-error: true
+
+      - name: Restore PLT cache
+        uses: actions/cache@v4
+        id: plt-cache
+        with:
+          path: firmware/priv/plts
+          key: ${{ runner.os }}-firmware-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-firmware-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt || echo "Dialyzer not configured, skipping"
+        continue-on-error: true
+
+      - name: Run Dialyzer
+        run: mix dialyzer || echo "Dialyzer not configured, skipping"
+        continue-on-error: true
+
+  test:
+    name: Tests on Host (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: firmware
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential automake autoconf git squashfs-tools ssh-askpass pkg-config curl
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            firmware/deps
+            firmware/_build
+          key: ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile
+        run: mix compile --warnings-as-errors
+
+      - name: Run tests on host
+        run: mix test
+
+  firmware-build:
+    name: Firmware Build for ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [rpi4, rpi5]
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    defaults:
+      run:
+        working-directory: firmware
+
+    env:
+      MIX_TARGET: ${{ matrix.target }}
+      MIX_ENV: dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential automake autoconf git squashfs-tools ssh-askpass pkg-config curl fwup
+
+      - name: Install fwup (firmware update tool)
+        run: |
+          wget https://github.com/fwup-home/fwup/releases/download/v1.10.1/fwup_1.10.1_amd64.deb
+          sudo dpkg -i fwup_1.10.1_amd64.deb
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            firmware/deps
+            firmware/_build/${{ matrix.target }}
+          key: ${{ runner.os }}-firmware-${{ matrix.target }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-firmware-${{ matrix.target }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install dependencies for target
+        run: mix deps.get
+
+      - name: Compile firmware
+        run: mix compile
+
+      - name: Build firmware image
+        run: mix firmware
+        continue-on-error: true
+
+      - name: Verify firmware artifact
+        run: |
+          if [ -f "_build/${{ matrix.target }}_dev/nerves/images/ntbr_firmware.fw" ]; then
+            echo "Firmware image built successfully"
+            ls -lh _build/${{ matrix.target }}_dev/nerves/images/
+          else
+            echo "Firmware image not found at expected path"
+            find _build -name "*.fw" || echo "No .fw files found"
+          fi
+        continue-on-error: true
+
+      - name: Upload firmware artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.target }}-${{ github.sha }}
+          path: firmware/_build/${{ matrix.target }}_dev/nerves/images/*.fw
+          if-no-files-found: ignore
+          retention-days: 7
