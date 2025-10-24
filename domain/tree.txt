@@ -1,0 +1,60 @@
+.
+├── _build
+│   ├── dev
+│   │   └── lib
+│   │       └── ntbr_domain
+│   │           ├── consolidated
+│   │           │   ├── Elixir.Collectable.beam
+│   │           │   ├── Elixir.Enumerable.beam
+│   │           │   ├── Elixir.IEx.Info.beam
+│   │           │   ├── Elixir.Inspect.beam
+│   │           │   ├── Elixir.JSON.Encoder.beam
+│   │           │   ├── Elixir.List.Chars.beam
+│   │           │   └── Elixir.String.Chars.beam
+│   │           └── ebin
+│   │               ├── Elixir.NTBR.Domain.beam
+│   │               └── ntbr_domain.app
+│   └── test
+│       └── lib
+│           └── ntbr_domain
+│               ├── consolidated
+│               │   ├── Elixir.Collectable.beam
+│               │   ├── Elixir.Enumerable.beam
+│               │   ├── Elixir.IEx.Info.beam
+│               │   ├── Elixir.Inspect.beam
+│               │   ├── Elixir.JSON.Encoder.beam
+│               │   ├── Elixir.List.Chars.beam
+│               │   └── Elixir.String.Chars.beam
+│               └── ebin
+│                   ├── Elixir.NTBR.Domain.beam
+│                   ├── Elixir.NTBR.Domain.Spinel.Command.beam
+│                   ├── Elixir.NTBR.Domain.Spinel.DataEncoder.beam
+│                   ├── Elixir.NTBR.Domain.Spinel.Frame.beam
+│                   ├── Elixir.NTBR.Domain.Spinel.Property.beam
+│                   └── ntbr_domain.app
+├── lib
+│   └── ntbr
+│       ├── domain
+│       │   ├── spinel
+│       │   │   ├── command.ex
+│       │   │   ├── data_encoder.ex
+│       │   │   ├── frame.ex
+│       │   │   └── property.ex
+│       │   └── thread
+│       └── domain.ex
+├── mix.exs
+├── README.md
+├── test
+│   ├── generators.exs
+│   ├── ntbr
+│   │   ├── domain
+│   │   │   └── spinel
+│   │   │       ├── command_test.exs
+│   │   │       ├── frame_test.exs
+│   │   │       └── property_test.exs
+│   │   └── domain_test.exs
+│   ├── support
+│   └── test_helper.exs
+└── tree.txt
+
+21 directories, 36 files

@@ -1,0 +1,152 @@
+[
+  [],
+  "erDiagram\n",
+  [],
+  [
+    [
+      "  ",
+      "\"NTBR.Domain.Resources.BorderRouter\"",
+      ["[", "\"Resources.BorderRouter\"", "]"],
+      [" {\n", [["    ", "UUID", " ", "id", [], [], "\n"]], "  }"],
+      "\n"
+    ],
+    [
+      "  ",
+      "\"NTBR.Domain.Resources.Device\"",
+      ["[", "\"Resources.Device\"", "]"],
+      [
+        " {\n",
+        [
+          ["    ", "UUID", " ", "id", [], [], "\n"],
+          ["    ", "Integer", " ", "rloc16", [], [], "\n"],
+          ["    ", "Binary", " ", "extended_address", [], [], "\n"],
+          [
+            "    ",
+            [["String", "[]"], "？"],
+            " ",
+            "ipv6_addresses",
+            [],
+            [],
+            "\n"
+          ],
+          ["    ", "Atom", " ", "device_type", [], [], "\n"],
+          ["    ", ["Map", "？"], " ", "mode", [], [], "\n"],
+          ["    ", ["Integer", "？"], " ", "link_quality", [], [], "\n"],
+          ["    ", ["Integer", "？"], " ", "rssi", [], [], "\n"],
+          ["    ", ["Integer", "？"], " ", "version", [], [], "\n"],
+          ["    ", "UtcDatetimeUsec", " ", "last_seen", [], [], "\n"],
+          ["    ", "Boolean", " ", "active", [], [], "\n"]
+        ],
+        "  }"
+      ],
+      "\n"
+    ],
+    [
+      "  ",
+      "\"NTBR.Domain.Resources.Joiner\"",
+      ["[", "\"Resources.Joiner\"", "]"],
+      [
+        " {\n",
+        [
+          ["    ", "UUID", " ", "id", [], [], "\n"],
+          ["    ", ["Binary", "？"], " ", "eui64", [], [], "\n"],
+          ["    ", "String", " ", "pskd", [], [], "\n"],
+          ["    ", "Integer", " ", "timeout", [], [], "\n"],
+          ["    ", "Atom", " ", "state", [], [], "\n"],
+          ["    ", ["Map", "？"], " ", "discerner", [], [], "\n"],
+          ["    ", ["String", "？"], " ", "vendor_name", [], [], "\n"],
+          ["    ", ["String", "？"], " ", "vendor_model", [], [], "\n"],
+          ["    ", ["String", "？"], " ", "vendor_sw_version", [], [], "\n"],
+          ["    ", ["String", "？"], " ", "provisioning_url", [], [], "\n"],
+          ["    ", ["UtcDatetimeUsec", "？"], " ", "started_at", [], [], "\n"],
+          [
+            "    ",
+            ["UtcDatetimeUsec", "？"],
+            " ",
+            "completed_at",
+            [],
+            [],
+            "\n"
+          ],
+          ["    ", ["UtcDatetimeUsec", "？"], " ", "expires_at", [], [], "\n"]
+        ],
+        "  }"
+      ],
+      "\n"
+    ],
+    [
+      "  ",
+      "\"NTBR.Domain.Resources.Network\"",
+      ["[", "\"Resources.Network\"", "]"],
+      [
+        " {\n",
+        [
+          ["    ", "UUID", " ", "id", [], [], "\n"],
+          ["    ", "String", " ", "name", [], [], "\n"],
+          ["    ", "String", " ", "network_name", [], [], "\n"],
+          ["    ", "Binary", " ", "network_key", [], [], "\n"],
+          ["    ", "Integer", " ", "pan_id", [], [], "\n"],
+          ["    ", "Binary", " ", "extended_pan_id", [], [], "\n"],
+          ["    ", "Integer", " ", "channel", [], [], "\n"],
+          ["    ", ["Binary", "？"], " ", "pskc", [], [], "\n"],
+          ["    ", ["String", "？"], " ", "mesh_local_prefix", [], [], "\n"],
+          ["    ", "Atom", " ", "state", [], [], "\n"],
+          ["    ", "Map", " ", "security_policy", [], [], "\n"]
+        ],
+        "  }"
+      ],
+      "\n"
+    ],
+    [
+      "  ",
+      "\"NTBR.Domain.Spinel.Resources.CommandLog\"",
+      ["[", "\"Spinel.Resources.CommandLog\"", "]"],
+      [
+        " {\n",
+        [
+          ["    ", "UUID", " ", "id", [], [], "\n"],
+          ["    ", "Atom", " ", "command", [], [], "\n"],
+          ["    ", ["Atom", "？"], " ", "property", [], [], "\n"],
+          ["    ", "Integer", " ", "tid", [], [], "\n"],
+          ["    ", "Atom", " ", "direction", [], [], "\n"],
+          ["    ", "Atom", " ", "status", [], [], "\n"],
+          ["    ", ["Binary", "？"], " ", "payload", [], [], "\n"],
+          ["    ", ["Binary", "？"], " ", "response_payload", [], [], "\n"],
+          ["    ", ["String", "？"], " ", "error_message", [], [], "\n"],
+          ["    ", "UtcDatetimeUsec", " ", "sent_at", [], [], "\n"],
+          [
+            "    ",
+            ["UtcDatetimeUsec", "？"],
+            " ",
+            "completed_at",
+            [],
+            [],
+            "\n"
+          ],
+          ["    ", "Atom", " ", "state", [], [], "\n"]
+        ],
+        "  }"
+      ],
+      "\n"
+    ],
+    [
+      "  ",
+      "\"NTBR.Domain.Spinel.Resources.PropertyState\"",
+      ["[", "\"Spinel.Resources.PropertyState\"", "]"],
+      [
+        " {\n",
+        [
+          ["    ", "UUID", " ", "id", [], [], "\n"],
+          ["    ", "Atom", " ", "property", [], [], "\n"],
+          ["    ", "Map", " ", "value", [], [], "\n"],
+          ["    ", ["Binary", "？"], " ", "raw_value", [], [], "\n"],
+          ["    ", "Atom", " ", "category", [], [], "\n"],
+          ["    ", "Integer", " ", "update_count", [], [], "\n"],
+          ["    ", "UtcDatetimeUsec", " ", "last_updated_at", [], [], "\n"]
+        ],
+        "  }"
+      ],
+      "\n"
+    ]
+  ]
+]
