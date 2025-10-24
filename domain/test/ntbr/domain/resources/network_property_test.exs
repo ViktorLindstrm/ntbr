@@ -211,41 +211,155 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   property "valid state transitions succeed" do
     forall transition <- valid_transition() do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
-      
+
       # Put network in correct starting state
       network = setup_for_transition(network, transition)
-      
+
       # Attempt transition
       result = apply_transition(network, transition)
-      
+
       match?({:ok, _}, result)
     end
   end
 
-  property "invalid state transitions fail" do
-    forall {_from_state, _to_action} <- invalid_transition() do
-      {:ok, _network} = Network.create(%{name: "T", network_name: "T", channel: 15})
-      
-      # Force network into from_state (for testing)
-      # In real tests, this would use proper state transitions
-      
-      true  # Placeholder - would verify transition fails
+  property "attach transition changes state from detached to child" do
+    forall _ <- integer(1, 100) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+
+      initial_state = network.state == :detached
+
+      {:ok, attached} = Network.attach(network)
+      final_state = attached.state == :child
+
+      initial_state and final_state
     end
+  end
+
+  property "promote transition changes state from child to router" do
+    forall _ <- integer(1, 100) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      {:ok, child} = Network.attach(network)
+
+      initial_state = child.state == :child
+
+      {:ok, router} = Network.promote(child)
+      final_state = router.state == :router
+
+      initial_state and final_state
+    end
+  end
+
+  property "become_leader transition changes state from router to leader" do
+    forall _ <- integer(1, 100) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      {:ok, child} = Network.attach(network)
+      {:ok, router} = Network.promote(child)
+
+      initial_state = router.state == :router
+
+      {:ok, leader} = Network.become_leader(router)
+      final_state = leader.state == :leader
+
+      initial_state and final_state
+    end
+  end
+
+  property "demote transition changes state from router to child" do
+    forall _ <- integer(1, 100) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      {:ok, child} = Network.attach(network)
+      {:ok, router} = Network.promote(child)
+
+      initial_state = router.state == :router
+
+      {:ok, demoted} = Network.demote(router)
+      final_state = demoted.state == :child
+
+      initial_state and final_state
+    end
+  end
+
+  property "demote transition changes state from leader to child" do
+    forall _ <- integer(1, 100) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      {:ok, child} = Network.attach(network)
+      {:ok, router} = Network.promote(child)
+      {:ok, leader} = Network.become_leader(router)
+
+      initial_state = leader.state == :leader
+
+      {:ok, demoted} = Network.demote(leader)
+      final_state = demoted.state == :child
+
+      initial_state and final_state
+    end
+  end
+
+  property "detach transition changes state to detached" do
+    forall _ <- integer(1, 100) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      {:ok, child} = Network.attach(network)
+
+      initial_state = child.state == :child
+
+      {:ok, detached} = Network.detach(child)
+      final_state = detached.state == :detached
+
+      initial_state and final_state
+    end
+  end
+
+  property "disable transition works from any state" do
+    forall state_action <- oneof([:detached, :attach, :promote, :become_leader]) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+
+      # Transition to desired state
+      network =
+        case state_action do
+          :detached -> network
+          :attach -> {:ok, n} = Network.attach(network); n
+          :promote -> {:ok, c} = Network.attach(network); {:ok, n} = Network.promote(c); n
+          :become_leader -> {:ok, c} = Network.attach(network); {:ok, r} = Network.promote(c); {:ok, n} = Network.become_leader(r); n
+        end
+
+      {:ok, disabled} = Network.disable(network)
+      disabled.state == :disabled
+    end
+  end
+
+  property "invalid state transitions fail" do
+    # Try to promote from detached (should fail)
+    {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+
+    result = Network.promote(network)
+
+    match?({:error, _}, result)
   end
 
   # ============================================================================
   # CALCULATION PROPERTIES - Derived values
   # ============================================================================
 
-  property "is_active calculation correct for all states" do
-    forall state <- oneof([:detached, :child, :router, :leader, :disabled]) do
-      {:ok, _network} = Network.create(%{name: "T", network_name: "T", channel: 15})
-      
-      # Get calculation (would need to actually transition to state in real test)
-      _expected_active = state in [:child, :router, :leader]
-      
-      # Placeholder - would verify calculation
-      true
+  property "is_operational calculation correct for all states" do
+    forall state_action <- oneof([:detached, :attach, :promote, :become_leader, :disable]) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+
+      # Transition to desired state
+      network =
+        case state_action do
+          :detached -> network
+          :attach -> {:ok, n} = Network.attach(network); n
+          :promote -> {:ok, c} = Network.attach(network); {:ok, n} = Network.promote(c); n
+          :become_leader -> {:ok, c} = Network.attach(network); {:ok, r} = Network.promote(c); {:ok, n} = Network.become_leader(r); n
+          :disable -> {:ok, n} = Network.disable(network); n
+        end
+
+      # Load calculation
+      network = Ash.load!(network, :is_operational)
+
+      # Verify calculation matches expected
+      expected = network.state in [:child, :router, :leader]
+      network.is_operational == expected
     end
   end
 
@@ -371,10 +485,14 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
     |> to_string()
   end
 
-  defp setup_for_transition(network, {_from_state, _action}) do
-    # In a real test, would use proper transitions to reach from_state
-    # For now, return network as-is
-    network
+  defp setup_for_transition(network, {from_state, _action}) do
+    # Transition network to the required starting state
+    case from_state do
+      :detached -> network
+      :child -> {:ok, n} = Network.attach(network); n
+      :router -> {:ok, c} = Network.attach(network); {:ok, n} = Network.promote(c); n
+      :leader -> {:ok, c} = Network.attach(network); {:ok, r} = Network.promote(c); {:ok, n} = Network.become_leader(r); n
+    end
   end
 
   defp apply_transition(network, {_from, :attach}) do

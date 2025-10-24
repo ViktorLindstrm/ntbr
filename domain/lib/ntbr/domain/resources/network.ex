@@ -304,21 +304,39 @@ defmodule NTBR.Domain.Resources.Network do
 
     # State machine transition actions
     update :attach do
+      description("Attach to the Thread network - transitions to child state")
+      require_atomic?(false)
+      change(transition_state(:child))
     end
 
     update :promote do
+      description("Promote from child to router role")
+      require_atomic?(false)
+      change(transition_state(:router))
     end
 
     update :become_leader do
+      description("Become the leader of the Thread network")
+      require_atomic?(false)
+      change(transition_state(:leader))
     end
 
     update :demote do
+      description("Demote from router or leader back to child role")
+      require_atomic?(false)
+      change(transition_state(:child))
     end
 
     update :detach do
+      description("Detach from the Thread network")
+      require_atomic?(false)
+      change(transition_state(:detached))
     end
 
     update :disable do
+      description("Disable the network")
+      require_atomic?(false)
+      change(transition_state(:disabled))
     end
   end
 
