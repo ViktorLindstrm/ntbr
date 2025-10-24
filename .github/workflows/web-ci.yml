@@ -1,0 +1,158 @@
+name: Web CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'core/**'
+      - 'config/**'
+      - '.github/workflows/web-ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - 'core/**'
+      - 'config/**'
+      - '.github/workflows/web-ci.yml'
+
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: '1.18'
+  OTP_VERSION: '27.0'
+
+jobs:
+  test:
+    name: Test (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        elixir: ['1.18']
+        otp: ['27.0']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Install core dependencies
+        working-directory: core
+        run: mix deps.get
+
+      - name: Compile core
+        working-directory: core
+        run: mix compile
+
+      - name: Install web dependencies
+        working-directory: web
+        run: mix deps.get
+
+      - name: Set up Node.js for assets
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup assets
+        working-directory: web
+        run: mix assets.setup
+
+      - name: Build assets
+        working-directory: web
+        run: mix assets.build
+
+      - name: Check formatting
+        working-directory: web
+        run: mix format --check-formatted
+
+      - name: Compile with warnings as errors
+        working-directory: web
+        run: mix compile --warnings-as-errors
+
+      - name: Run tests
+        working-directory: web
+        run: mix test
+
+      - name: Run Credo
+        working-directory: web
+        run: mix credo --strict
+
+      - name: Restore PLT cache
+        uses: actions/cache@v4
+        id: plt-cache
+        with:
+          path: web/priv/plts
+          key: ${{ runner.os }}-web-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+
+      - name: Create PLTs
+        if: steps.plt-cache.outputs.cache-hit != 'true'
+        working-directory: web
+        run: mix dialyzer --plt
+
+      - name: Run Dialyzer
+        working-directory: web
+        run: mix dialyzer
+
+  assets:
+    name: Assets Build Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-web-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-web-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+
+      - name: Install dependencies
+        working-directory: web
+        run: mix deps.get
+
+      - name: Setup and build assets for production
+        working-directory: web
+        run: |
+          mix assets.setup
+          mix assets.deploy
+
+      - name: Verify assets were built
+        run: |
+          if [ ! -d "web/priv/static/assets" ]; then
+            echo "Assets directory not found!"
+            exit 1
+          fi
+          echo "Assets built successfully"
