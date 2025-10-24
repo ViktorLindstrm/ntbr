@@ -85,52 +85,10 @@ jobs:
       - name: Run Dialyzer
         run: mix dialyzer
 
-  unit-tests:
-    name: Unit Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        elixir: ['1.18']
-        otp: ['27.0']
-
-    defaults:
-      run:
-        working-directory: domain
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
-        with:
-          elixir-version: ${{ matrix.elixir }}
-          otp-version: ${{ matrix.otp }}
-
-      - name: Restore dependencies cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            domain/deps
-            domain/_build
-          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-
-      - name: Install dependencies
-        run: mix deps.get
-
-      - name: Compile
-        run: mix compile --warnings-as-errors
-
-      - name: Run unit tests (exclude property tests)
-        run: mix test --exclude property
-
-  property-tests:
+  tests:
     name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     strategy:
       matrix:
@@ -142,11 +100,11 @@ jobs:
         working-directory: domain
 
     env:
-      # PropCheck configuration for CI - more thorough than local development
+      # PropCheck configuration for CI - thorough property-based testing
       PROPCHECK_NUMTESTS: 500
       PROPCHECK_VERBOSE: true
       PROPCHECK_SEARCH_STEPS: 100000
-      # Use deterministic seed for reproducibility (can be overridden)
+      # Use deterministic seed for reproducibility
       PROPCHECK_SEED: ${{ github.run_id }}
 
     steps:
@@ -175,26 +133,43 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
-      - name: Run property-based tests
-        run: mix test --only property --max-failures 1
-        continue-on-error: false
+      - name: Run all property-based tests
+        run: |
+          echo "======================================"
+          echo "Running Property-Based Test Suite"
+          echo "Configuration:"
+          echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
+          echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
+          echo "  - Seed: $PROPCHECK_SEED"
+          echo "======================================"
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            echo ""
+            echo "======================================"
+            echo "❌ TESTS FAILED"
+            echo "======================================"
+            exit 1
+          }
+          echo ""
+          echo "======================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "======================================"
 
       - name: Upload PropCheck counterexamples
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: propcheck-counterexamples-${{ github.run_id }}
+          name: propcheck-counterexamples-domain-${{ github.run_id }}
           path: |
             domain/.propcheck
             domain/counterexample.*.erl
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Upload property test reports
+      - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: property-test-reports-${{ github.run_id }}
+          name: test-reports-domain-${{ github.run_id }}
           path: domain/_build/test/lib/ntbr_domain/
           if-no-files-found: ignore
           retention-days: 7
@@ -202,15 +177,18 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     defaults:
       run:
         working-directory: domain
 
     env:
-      # Use fewer iterations for coverage to keep runtime reasonable
-      PROPCHECK_NUMTESTS: 100
+      # Use same configuration as test job for accurate coverage
+      PROPCHECK_NUMTESTS: 500
+      PROPCHECK_VERBOSE: true
+      PROPCHECK_SEARCH_STEPS: 100000
+      PROPCHECK_SEED: ${{ github.run_id }}
 
     steps:
       - name: Checkout code
@@ -235,12 +213,14 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Run tests with coverage (including property tests)
-        run: mix coveralls.html
+      - name: Run tests with coverage
+        run: |
+          echo "Running property-based tests with coverage analysis..."
+          mix coveralls.html
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
+          name: coverage-report-domain
           path: domain/cover/
           retention-days: 7

@@ -124,8 +124,22 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
-      - name: Run tests
-        run: mix test
+      - name: Run all tests
+        run: |
+          echo "======================================"
+          echo "Running Test Suite"
+          echo "======================================"
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            echo ""
+            echo "======================================"
+            echo "❌ TESTS FAILED"
+            echo "======================================"
+            exit 1
+          }
+          echo ""
+          echo "======================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "======================================"
 
   release:
     name: Release Build Test (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})

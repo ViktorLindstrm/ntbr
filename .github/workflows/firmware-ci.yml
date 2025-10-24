@@ -135,8 +135,22 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
-      - name: Run tests on host
-        run: mix test
+      - name: Run all tests on host
+        run: |
+          echo "======================================"
+          echo "Running Test Suite (Host Target)"
+          echo "======================================"
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            echo ""
+            echo "======================================"
+            echo "❌ TESTS FAILED"
+            echo "======================================"
+            exit 1
+          }
+          echo ""
+          echo "======================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "======================================"
 
   firmware-build:
     name: Firmware Build for ${{ matrix.target }}
