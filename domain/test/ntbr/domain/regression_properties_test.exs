@@ -182,7 +182,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       })
       
       # Apply operations
-      _results = Enum.map(device_operations, fn op ->
+      Enum.each(device_operations, fn op ->
         apply_device_operation(network.id, op)
       end)
       
