@@ -263,7 +263,6 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           eui64: :crypto.strong_rand_bytes(8),
           pskd: "TEST1234"
         })
-      IO.inspect(initial_joiner, label: "initial_joiner")
 
       # Get to initial state
       joiner =
@@ -272,12 +271,11 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
             initial_joiner
 
           :joining ->
-            IO.inspect(j, label: "j")
-            j
+            {:ok, joining_joiner} = Joiner.start(initial_joiner)
+            joining_joiner
         end
 
       {:ok, expired} = Joiner.expire(joiner)
-      IO.inspect(expired, label: "expired")
       expired.state == :expired
     end
   end
