@@ -1,14 +1,13 @@
 defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
-  @moduledoc """
-  Property-based tests for NetworkManager using PropCheck 1.5.
-
-  Tests verify that NetworkManager correctly:
-  - Manages network lifecycle transitions
-  - Handles concurrent operations safely
-  - Synchronizes state between RCP and domain
-  - Processes topology updates correctly
-  - Monitors joiner sessions reliably
-  """
+  @moduledoc false
+  # Property-based tests for NetworkManager using PropCheck 1.5.
+  #
+  # Tests verify that NetworkManager correctly:
+  # - Manages network lifecycle transitions
+  # - Handles concurrent operations safely
+  # - Synchronizes state between RCP and domain
+  # - Processes topology updates correctly
+  # - Monitors joiner sessions reliably
   use ExUnit.Case, async: false
   use PropCheck
 

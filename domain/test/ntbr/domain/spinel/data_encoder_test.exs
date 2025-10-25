@@ -1,16 +1,15 @@
 defmodule NTBR.Domain.Spinel.DataEncoderTest do
-  @moduledoc """
-  Tests for Spinel DataEncoder module.
-
-  Tests encoding and decoding of all Spinel data types including:
-  - Integer types (UINT8, UINT16, UINT32, INT8, INT16, INT32)
-  - Boolean
-  - UTF-8 strings
-  - Binary data
-  - EUI-64
-  - IPv6 addresses
-  - Packed length encoding
-  """
+  @moduledoc false
+  # Tests for Spinel DataEncoder module.
+  #
+  # Tests encoding and decoding of all Spinel data types including:
+  # - Integer types (UINT8, UINT16, UINT32, INT8, INT16, INT32)
+  # - Boolean
+  # - UTF-8 strings
+  # - Binary data
+  # - EUI-64
+  # - IPv6 addresses
+  # - Packed length encoding
   use ExUnit.Case, async: true
   use PropCheck
 

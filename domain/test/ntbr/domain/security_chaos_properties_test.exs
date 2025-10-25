@@ -1,19 +1,18 @@
 defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
-  @moduledoc """
-  Security-focused chaos testing with adversarial scenarios.
-  
-  Tests the system under security attacks, malicious inputs,
-  and adversarial conditions. Goes beyond happy path testing
-  to ensure security properties hold under attack.
-  
-  Based on STRIDE threat model:
-  - Spoofing
-  - Tampering
-  - Repudiation
-  - Information Disclosure
-  - Denial of Service
-  - Elevation of Privilege
-  """
+  @moduledoc false
+  # Security-focused chaos testing with adversarial scenarios.
+  #   
+  #   Tests the system under security attacks, malicious inputs,
+  #   and adversarial conditions. Goes beyond happy path testing
+  #   to ensure security properties hold under attack.
+  #   
+  #   Based on STRIDE threat model:
+  #   - Spoofing
+  #   - Tampering
+  #   - Repudiation
+  #   - Information Disclosure
+  #   - Denial of Service
+  #   - Elevation of Privilege
   use ExUnit.Case, async: false
   use PropCheck
 

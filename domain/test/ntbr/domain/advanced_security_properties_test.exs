@@ -1,15 +1,14 @@
 defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
-  @moduledoc """
-  Advanced security testing for side-channel attacks, network-level
-  attacks, and sophisticated adversarial scenarios.
-  
-  Covers:
-  - Side-channel attacks (timing, power analysis simulation)
-  - Network topology attacks
-  - Byzantine fault scenarios
-  - Cryptographic weaknesses
-  - Protocol-level vulnerabilities
-  """
+  @moduledoc false
+  # Advanced security testing for side-channel attacks, network-level
+  #   attacks, and sophisticated adversarial scenarios.
+  #   
+  #   Covers:
+  #   - Side-channel attacks (timing, power analysis simulation)
+  #   - Network topology attacks
+  #   - Byzantine fault scenarios
+  #   - Cryptographic weaknesses
+  #   - Protocol-level vulnerabilities
   use ExUnit.Case, async: false
   use PropCheck
 

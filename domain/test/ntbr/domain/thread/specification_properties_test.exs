@@ -1,11 +1,10 @@
 defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
-  @moduledoc """
-  Property-based tests for Thread 1.3 specification compliance.
-  
-  CONVERTED FROM: thread_compliance_tests.exs
-  
-  Tests that Thread spec requirements hold for ALL cases.
-  """
+  @moduledoc false
+  # Property-based tests for Thread 1.3 specification compliance.
+  #
+  # CONVERTED FROM: thread_compliance_tests.exs
+  #
+  # Tests that Thread spec requirements hold for ALL cases.
   use ExUnit.Case, async: false
   use PropCheck
 

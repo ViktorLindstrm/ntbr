@@ -1,7 +1,6 @@
 defmodule NTBR.TestSupport.Generators do
-  @moduledoc """
-  Shared property-based test generators for BorderRouter tests.
-  """
+  @moduledoc false
+  # Shared property-based test generators for NTBR tests.
 
   import PropCheck
 
@@ -189,9 +188,8 @@ defmodule NTBR.TestSupport.Generators do
 end
 
 defmodule NTBR.TestSupport.Helpers do
-  @moduledoc """
-  Helper functions for NTBR tests.
-  """
+  @moduledoc false
+  # Helper functions for NTBR tests.
 
   alias NTBR.Domain.Spinel.{Frame, DataEncoder, Property}
   # Note: HDLC is infrastructure-level and not available in domain tests

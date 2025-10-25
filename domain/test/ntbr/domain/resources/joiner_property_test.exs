@@ -1,16 +1,15 @@
 defmodule NTBR.Domain.Resources.JoinerPropertyTest do
-  @moduledoc """
-  Property-based tests for Joiner resource.
-
-  Tests commissioning workflow and state machine transitions.
-
-  Progression:
-  1. Basic CRUD operations
-  2. PSKD validation
-  3. State machine transitions
-  4. Timeout/expiration logic
-  5. Wildcard vs specific joiners
-  """
+  @moduledoc false
+  # Property-based tests for Joiner resource.
+  #
+  # Tests commissioning workflow and state machine transitions.
+  #
+  # Progression:
+  # 1. Basic CRUD operations
+  # 2. PSKD validation
+  # 3. State machine transitions
+  # 4. Timeout/expiration logic
+  # 5. Wildcard vs specific joiners
   use ExUnit.Case, async: true
   use PropCheck
 
