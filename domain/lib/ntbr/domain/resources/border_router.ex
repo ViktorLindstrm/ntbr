@@ -183,11 +183,8 @@ defmodule NTBR.Domain.Resources.BorderRouter do
     calculate :service_count, :integer do
       calculation fn records, _context ->
         Enum.map(records, fn br ->
-          count = 0
-          count = if br.enable_mdns, do: count + 1, else: count
-          count = if br.enable_srp_server, do: count + 1, else: count
-          count = if br.enable_nat64, do: count + 1, else: count
-          count
+          [br.enable_mdns, br.enable_srp_server, br.enable_nat64]
+          |> Enum.count(& &1)
         end)
       end
     end
