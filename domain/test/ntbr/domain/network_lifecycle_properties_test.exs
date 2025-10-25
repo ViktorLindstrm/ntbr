@@ -1,10 +1,9 @@
 defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
-  @moduledoc """
-  Property-based tests for complete network lifecycle workflows.
-  
-  These properties test network formation sequences, commissioning,
-  and all lifecycle transitions.
-  """
+  @moduledoc false
+  # Property-based tests for complete network lifecycle workflows.
+  #
+  # These properties test network formation sequences, commissioning,
+  # and all lifecycle transitions.
   use ExUnit.Case, async: false
   use PropCheck
 

@@ -102,7 +102,6 @@ jobs:
     env:
       # PropCheck configuration for CI - thorough property-based testing
       PROPCHECK_NUMTESTS: 500
-      PROPCHECK_VERBOSE: true
       PROPCHECK_SEARCH_STEPS: 100000
 
     steps:
@@ -183,7 +182,6 @@ jobs:
     env:
       # Use same configuration as test job for accurate coverage
       PROPCHECK_NUMTESTS: 500
-      PROPCHECK_VERBOSE: true
       PROPCHECK_SEARCH_STEPS: 100000
 
     steps:

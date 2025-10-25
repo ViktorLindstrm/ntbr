@@ -1,4 +1,5 @@
 defmodule NTBR.Domain.Spinel.FramePropertyTest do
+  @moduledoc false
   use ExUnit.Case, async: true
   use PropCheck
 

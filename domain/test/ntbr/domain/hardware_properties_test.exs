@@ -1,11 +1,10 @@
 defmodule NTBR.Domain.Test.HardwarePropertiesTest do
-  @moduledoc """
-  Property-based tests for hardware behavior under various conditions.
-  
-  CONVERTED FROM: hardware_simulation.exs
-  
-  Tests RCP behavior with different timings and sequences.
-  """
+  @moduledoc false
+  # Property-based tests for hardware behavior under various conditions.
+  #
+  # CONVERTED FROM: hardware_simulation.exs
+  #
+  # Tests RCP behavior with different timings and sequences.
   use ExUnit.Case, async: false
   use PropCheck
 

@@ -1,14 +1,13 @@
 defmodule NTBR.Domain.IntegrationTestHelpers do
-  @moduledoc """
-  Test helpers for integration testing NetworkManager, Spinel.Client,
-  and Ash resources together.
-  
-  Provides utilities for:
-  - Setting up test environments
-  - Creating mock RCP responses
-  - Simulating Spinel events
-  - Verifying state synchronization
-  """
+  @moduledoc false
+  # Test helpers for integration testing NetworkManager, Spinel.Client,
+  # and Ash resources together.
+  #
+  # Provides utilities for:
+  # - Setting up test environments
+  # - Creating mock RCP responses
+  # - Simulating Spinel events
+  # - Verifying state synchronization
 
   alias NTBR.Domain.Resources.{Network, Device, Joiner, BorderRouter}
   alias NTBR.Domain.Thread.NetworkManager
@@ -216,15 +215,14 @@ defmodule NTBR.Domain.IntegrationTestHelpers do
 end
 
 defmodule NTBR.Domain.IntegrationTest do
-  @moduledoc """
-  Integration tests for the complete NTBR stack.
-  
-  Tests the interaction between:
-  - NetworkManager
-  - Spinel.Client
-  - Ash Resources (Network, Device, Joiner, BorderRouter)
-  - PubSub event system
-  """
+  @moduledoc false
+  # Integration tests for the complete NTBR stack.
+  #
+  # Tests the interaction between:
+  # - NetworkManager
+  # - Spinel.Client
+  # - Ash Resources (Network, Device, Joiner, BorderRouter)
+  # - PubSub event system
   use ExUnit.Case, async: false
   use PropCheck
 

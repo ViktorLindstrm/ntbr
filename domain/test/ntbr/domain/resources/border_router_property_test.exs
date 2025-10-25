@@ -1,9 +1,8 @@
 defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
-  @moduledoc """
-  Property-based tests for BorderRouter resource.
-
-  Tests infrastructure configuration, routing, and service management.
-  """
+  @moduledoc false
+  # Property-based tests for BorderRouter resource.
+  #
+  # Tests infrastructure configuration, routing, and service management.
   use ExUnit.Case, async: true
   use PropCheck
 

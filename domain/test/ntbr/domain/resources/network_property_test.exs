@@ -1,14 +1,13 @@
 defmodule NTBR.Domain.Resources.NetworkPropertyTest do
-  @moduledoc """
-  Property-based tests for Network resource.
-  
-  Tests progress from basic to advanced:
-  1. Basic CRUD operations
-  2. Attribute constraints validation
-  3. State machine transitions
-  4. Calculations
-  5. Complex validations
-  """
+  @moduledoc false
+  # Property-based tests for Network resource.
+  #
+  # Tests progress from basic to advanced:
+  # 1. Basic CRUD operations
+  # 2. Attribute constraints validation
+  # 3. State machine transitions
+  # 4. Calculations
+  # 5. Complex validations
   use ExUnit.Case, async: true
   use PropCheck
   

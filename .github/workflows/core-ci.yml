@@ -102,10 +102,7 @@ jobs:
     env:
       # PropCheck configuration for CI - stateful GenServer tests are expensive
       PROPCHECK_NUMTESTS: 300
-      PROPCHECK_VERBOSE: true
       PROPCHECK_SEARCH_STEPS: 100000
-      # Use deterministic seed for reproducibility
-      PROPCHECK_SEED: ${{ github.run_id }}
 
     steps:
       - name: Checkout code
@@ -140,7 +137,6 @@ jobs:
           echo "Configuration:"
           echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
           echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
-          echo "  - Seed: $PROPCHECK_SEED"
           echo "======================================"
           mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
             echo ""

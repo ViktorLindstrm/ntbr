@@ -1,19 +1,18 @@
 defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
-  @moduledoc """
-  Security-focused chaos testing with adversarial scenarios.
-  
-  Tests the system under security attacks, malicious inputs,
-  and adversarial conditions. Goes beyond happy path testing
-  to ensure security properties hold under attack.
-  
-  Based on STRIDE threat model:
-  - Spoofing
-  - Tampering
-  - Repudiation
-  - Information Disclosure
-  - Denial of Service
-  - Elevation of Privilege
-  """
+  @moduledoc false
+  # Security-focused chaos testing with adversarial scenarios.
+  #   
+  #   Tests the system under security attacks, malicious inputs,
+  #   and adversarial conditions. Goes beyond happy path testing
+  #   to ensure security properties hold under attack.
+  #   
+  #   Based on STRIDE threat model:
+  #   - Spoofing
+  #   - Tampering
+  #   - Repudiation
+  #   - Information Disclosure
+  #   - Denial of Service
+  #   - Elevation of Privilege
   use ExUnit.Case, async: false
   use PropCheck
 
@@ -190,9 +189,10 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # If accepted, verify it didn't cause SQL injection
-          networks = Network.read!()
+          # Use list action instead of read!() which requires an ID
+          {:ok, networks} = Network.list()
           is_list(networks)  # Database still works
-        
+
         {:error, _} ->
           # Rejected is also fine
           true

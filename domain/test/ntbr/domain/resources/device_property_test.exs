@@ -1,9 +1,8 @@
 defmodule NTBR.Domain.Resources.DevicePropertyTest do
-  @moduledoc """
-  Property-based tests for Device resource.
-
-  Tests device management, topology, and link quality tracking.
-  """
+  @moduledoc false
+  # Property-based tests for Device resource.
+  #
+  # Tests device management, topology, and link quality tracking.
   use ExUnit.Case, async: true
   use PropCheck
 
