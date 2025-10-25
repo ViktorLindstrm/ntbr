@@ -233,7 +233,7 @@ defmodule NTBR.Domain.Spinel.Frame do
   end
 
   @spec extract_tid(header()) :: tid()
-  defp extract_tid(header) when is_integer(header) and header in 128..255 do
+  def extract_tid(header) when is_integer(header) and header in 128..255 do
     header &&& 0x0F
   end
 end
