@@ -55,10 +55,10 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
         end)
 
       # First attach succeeds, subsequent might return already attached
-      assert Enum.at(attach_results, 0) in [:ok, {:error, :already_attached}]
+      first_attach_ok = Enum.at(attach_results, 0) in [:ok, {:error, :already_attached}]
 
       # Manager should be attached
-      assert NetworkManager.attached?()
+      manager_attached = NetworkManager.attached?()
 
       # Multiple detaches should succeed
       detach_results =
@@ -67,14 +67,15 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
         end)
 
       # All detaches should succeed
-      assert Enum.all?(detach_results, &(&1 == :ok))
+      all_detaches_ok = Enum.all?(detach_results, &(&1 == :ok))
 
       # Manager should not be attached
-      refute NetworkManager.attached?()
+      manager_not_attached = not NetworkManager.attached?()
 
       # Cleanup
       Network.delete(network)
-      true
+
+      first_attach_ok and manager_attached and all_detaches_ok and manager_not_attached
     end
   end
 
@@ -145,29 +146,30 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
 
       # Should have routers + children
       expected_count = length(router_list) + length(child_list)
-      assert length(devices) == expected_count
+      device_count_ok = length(devices) == expected_count
 
       # Verify router types
       routers = Enum.filter(devices, &(&1.device_type == :router))
-      assert length(routers) == length(router_list)
+      router_count_ok = length(routers) == length(router_list)
 
       # Verify end device types
       end_devices = Enum.filter(devices, &(&1.device_type == :end_device))
-      assert length(end_devices) == length(child_list)
+      end_device_count_ok = length(end_devices) == length(child_list)
 
       # All devices should have valid RSSI
-      assert Enum.all?(devices, fn d ->
-               d.rssi >= -100 and d.rssi <= 0
-             end)
+      rssi_valid = Enum.all?(devices, fn d ->
+        d.rssi >= -100 and d.rssi <= 0
+      end)
 
       # All devices should have valid link quality
-      assert Enum.all?(devices, fn d ->
-               d.link_quality in 0..3
-             end)
+      link_quality_valid = Enum.all?(devices, fn d ->
+        d.link_quality in 0..3
+      end)
 
       NetworkManager.detach_network()
       Network.delete(network)
-      true
+
+      device_count_ok and router_count_ok and end_device_count_ok and rssi_valid and link_quality_valid
     end
     |> collect(:device_count, fn {_, routers, children} ->
       total = length(routers) + length(children)
@@ -303,20 +305,21 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
       Process.sleep(100)
 
       # Verify expired joiners marked as expired
-      Enum.each(expired_joiners, fn joiner ->
+      expired_ok = Enum.all?(expired_joiners, fn joiner ->
         updated = Joiner.by_id!(joiner.id)
-        assert updated.state == :expired
+        updated.state == :expired
       end)
 
       # Verify active joiners unchanged
-      Enum.each(active_joiners, fn joiner ->
+      active_ok = Enum.all?(active_joiners, fn joiner ->
         updated = Joiner.by_id!(joiner.id)
-        assert updated.state == :pending
+        updated.state == :pending
       end)
 
       NetworkManager.detach_network()
       Network.delete(network)
-      true
+
+      expired_ok and active_ok
     end
   end
 

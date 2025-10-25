@@ -189,9 +189,10 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # If accepted, verify it didn't cause SQL injection
-          networks = Network.read!()
+          # Use list action instead of read!() which requires an ID
+          {:ok, networks} = Network.list()
           is_list(networks)  # Database still works
-        
+
         {:error, _} ->
           # Rejected is also fine
           true
