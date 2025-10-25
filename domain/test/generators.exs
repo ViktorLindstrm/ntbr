@@ -18,7 +18,7 @@ defmodule NTBR.TestSupport.Generators do
   """
   @spec command() :: PropCheck.type()
   def command do
-    alias BorderRouter.Domain.Spinel.Command
+    alias NTBR.Domain.Spinel.Command
     oneof(Command.all())
   end
 
@@ -27,7 +27,7 @@ defmodule NTBR.TestSupport.Generators do
   """
   @spec property() :: PropCheck.type()
   def property do
-    alias BorderRouter.Domain.Spinel.Property
+    alias NTBR.Domain.Spinel.Property
     oneof(Property.all())
   end
 
@@ -43,7 +43,7 @@ defmodule NTBR.TestSupport.Generators do
   @spec frame() :: PropCheck.type()
   def frame do
     let [cmd <- command(), t <- tid(), p <- payload()] do
-      BorderRouter.Domain.Spinel.Frame.new(cmd, p, tid: t)
+      NTBR.Domain.Spinel.Frame.new(cmd, p, tid: t)
     end
   end
 
@@ -188,13 +188,14 @@ defmodule NTBR.TestSupport.Generators do
   end
 end
 
-defmodule BorderRouter.TestSupport.Helpers do
+defmodule NTBR.TestSupport.Helpers do
   @moduledoc """
-  Helper functions for BorderRouter tests.
+  Helper functions for NTBR tests.
   """
 
-  alias BorderRouter.Domain.Spinel.{Frame, DataEncoder, Property}
-  alias BorderRouter.Infrastructure.RCP.SerialPort.HDLC
+  alias NTBR.Domain.Spinel.{Frame, DataEncoder, Property}
+  # Note: HDLC is infrastructure-level and not available in domain tests
+  # alias NTBR.Infrastructure.RCP.SerialPort.HDLC
 
   @doc """
   Creates a mock Spinel frame with specified parameters.
@@ -219,15 +220,15 @@ defmodule BorderRouter.TestSupport.Helpers do
     Frame.new(:prop_value_is, <<prop_id>> <> value, tid: tid)
   end
 
-  @doc """
-  Encodes and frames data as it would be sent over serial.
-  """
-  @spec encode_for_serial(Frame.t()) :: binary()
-  def encode_for_serial(%Frame{} = frame) do
-    frame
-    |> Frame.encode()
-    |> HDLC.encode()
-  end
+  # @doc """
+  # Encodes and frames data as it would be sent over serial.
+  # """
+  # @spec encode_for_serial(Frame.t()) :: binary()
+  # def encode_for_serial(%Frame{} = frame) do
+  #   frame
+  #   |> Frame.encode()
+  #   |> HDLC.encode()
+  # end
 
   @doc """
   Verifies a frame roundtrip (encode -> decode).
@@ -247,18 +248,18 @@ defmodule BorderRouter.TestSupport.Helpers do
     end
   end
 
-  @doc """
-  Verifies HDLC roundtrip (encode -> decode).
-  """
-  @spec verify_hdlc_roundtrip(binary()) :: boolean()
-  def verify_hdlc_roundtrip(payload) when is_binary(payload) do
-    encoded = HDLC.encode(payload)
-
-    case HDLC.decode(encoded) do
-      {:ok, ^payload} -> true
-      _ -> false
-    end
-  end
+  # @doc """
+  # Verifies HDLC roundtrip (encode -> decode).
+  # """
+  # @spec verify_hdlc_roundtrip(binary()) :: boolean()
+  # def verify_hdlc_roundtrip(payload) when is_binary(payload) do
+  #   encoded = HDLC.encode(payload)
+  #
+  #   case HDLC.decode(encoded) do
+  #     {:ok, ^payload} -> true
+  #     _ -> false
+  #   end
+  # end
 
   @doc """
   Extracts property value from a frame response.
