@@ -140,17 +140,88 @@ jobs:
           echo "======================================"
           echo "Running Test Suite (Host Target)"
           echo "======================================"
-          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
-            echo ""
-            echo "======================================"
-            echo "❌ TESTS FAILED"
-            echo "======================================"
-            exit 1
-          }
           echo ""
-          echo "======================================"
-          echo "✅ ALL TESTS PASSED"
-          echo "======================================"
+
+          # Run tests with coverage and capture results
+          TEST_EXIT_CODE=0
+          mix test --cover --trace --slowest 10 2>&1 | tee test_output.log || TEST_EXIT_CODE=$?
+
+          echo ""
+          echo "╔════════════════════════════════════════════════════════════════════╗"
+          echo "║                        TEST SUMMARY REPORT                         ║"
+          echo "╚════════════════════════════════════════════════════════════════════╝"
+          echo ""
+
+          # Parse test results
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            TOTAL_TESTS=$(grep -oP '\d+ tests?' test_output.log | tail -1 | grep -oP '\d+' || echo "0")
+            PASSED_TESTS=$TOTAL_TESTS
+            FAILED_TESTS=0
+
+            echo "┌─────────────────────────────────────┐"
+            echo "│         ✅  ALL TESTS PASSED        │"
+            echo "└─────────────────────────────────────┘"
+            echo ""
+            echo "  📊 Test Statistics:"
+            echo "  ├─ Total Tests:   $TOTAL_TESTS"
+            echo "  ├─ Passed:        $PASSED_TESTS ✓"
+            echo "  └─ Failed:        $FAILED_TESTS"
+          else
+            TOTAL_TESTS=$(grep -oP '\d+ tests?' test_output.log | tail -1 | grep -oP '\d+' || echo "0")
+            FAILED_TESTS=$(grep -oP '\d+ failures?' test_output.log | tail -1 | grep -oP '\d+' || echo "0")
+            PASSED_TESTS=$((TOTAL_TESTS - FAILED_TESTS))
+
+            echo "┌─────────────────────────────────────┐"
+            echo "│         ❌  TESTS FAILED            │"
+            echo "└─────────────────────────────────────┘"
+            echo ""
+            echo "  📊 Test Statistics:"
+            echo "  ├─ Total Tests:   $TOTAL_TESTS"
+            echo "  ├─ Passed:        $PASSED_TESTS ✓"
+            echo "  └─ Failed:        $FAILED_TESTS ✗"
+            echo ""
+            echo "  ⚠️  Failed Tests:"
+            echo "  ─────────────────"
+
+            # Extract failed test names
+            grep -A 2 "^\s*\d\+)" test_output.log | grep "test " | sed 's/^/  • /' || echo "  (Could not parse failed test names)"
+          fi
+
+          echo ""
+          echo "  📈 Coverage Report:"
+          echo "  ───────────────────"
+
+          # Extract coverage info from output
+          if grep -q "COV" test_output.log; then
+            grep "COV" test_output.log | tail -5 | while read line; do
+              echo "  $line"
+            done
+            echo ""
+            TOTAL_COV=$(grep -oP 'Total.*?(\d+\.\d+)%' test_output.log | tail -1 | grep -oP '\d+\.\d+' || echo "N/A")
+            echo "  📊 Total Coverage: $TOTAL_COV%"
+          else
+            echo "  (Coverage data not available)"
+          fi
+
+          echo ""
+          echo "  ⏱️  Performance:"
+          echo "  ────────────────"
+          echo "  (See slowest tests above)"
+
+          echo ""
+          echo "╔════════════════════════════════════════════════════════════════════╗"
+
+          if [ $TEST_EXIT_CODE -eq 0 ]; then
+            echo "║                    🎉  BUILD SUCCESSFUL  🎉                        ║"
+          else
+            echo "║                     💥  BUILD FAILED  💥                           ║"
+          fi
+
+          echo "╚════════════════════════════════════════════════════════════════════╝"
+          echo ""
+
+          # Exit with the original test exit code
+          exit $TEST_EXIT_CODE
 
   firmware-build:
     name: Firmware Build for ${{ matrix.target }}
