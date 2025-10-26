@@ -88,7 +88,7 @@ jobs:
   tests:
     name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event_name == 'pull_request' && '15' || '45' }}
 
     strategy:
       matrix:
@@ -100,13 +100,40 @@ jobs:
         working-directory: domain
 
     env:
-      # PropCheck configuration for CI - thorough property-based testing
-      PROPCHECK_NUMTESTS: 500
-      PROPCHECK_SEARCH_STEPS: 100000
+      # PropCheck configuration for CI
+      # PR: Faster feedback with reduced test cases (100)
+      # Merge: Thorough testing with full test cases (500)
+      PROPCHECK_NUMTESTS: ${{ github.event_name == 'pull_request' && '100' || '500' }}
+      PROPCHECK_SEARCH_STEPS: ${{ github.event_name == 'pull_request' && '50000' || '100000' }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history to compare changes
+
+      - name: Detect which tests to run
+        id: detect-tests
+        if: github.event_name == 'pull_request'
+        run: |
+          cd ..  # Go to repo root since we're in domain/ by default
+
+          # Make script executable
+          chmod +x .github/scripts/detect-domain-tests.sh
+
+          # Run detection script and capture output
+          output=$(.github/scripts/detect-domain-tests.sh origin/${{ github.base_ref }} HEAD)
+          echo "$output"
+
+          # Extract test pattern and description from script output
+          test_pattern=$(echo "$output" | grep "^test_pattern=" | cut -d'=' -f2)
+          test_description=$(echo "$output" | grep "^test_description=" | cut -d'=' -f2-)
+
+          # Set outputs for later steps
+          echo "pattern=$test_pattern" >> $GITHUB_OUTPUT
+          echo "description=$test_description" >> $GITHUB_OUTPUT
+
+          cd domain  # Go back to domain directory
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
@@ -130,15 +157,34 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
-      - name: Run all property-based tests
+      - name: Run property-based tests
         run: |
           echo "======================================"
           echo "Running Property-Based Test Suite"
+          echo "Event: ${{ github.event_name }}"
           echo "Configuration:"
           echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
           echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "  - Mode: PR (fast feedback with smart test selection)"
+            TEST_PATTERN="${{ steps.detect-tests.outputs.pattern }}"
+            TEST_DESC="${{ steps.detect-tests.outputs.description }}"
+            if [ -n "$TEST_PATTERN" ]; then
+              echo "  - Running: $TEST_DESC"
+              echo "  - Pattern: $TEST_PATTERN"
+            else
+              echo "  - Running: All tests (detection failed or no pattern)"
+              TEST_PATTERN="test/ntbr/domain/"
+            fi
+          else
+            echo "  - Mode: Merge (thorough testing - all tests)"
+            TEST_PATTERN="test/ntbr/domain/"
+          fi
           echo "======================================"
-          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+
+          # Run tests with the determined pattern
+          mix test $TEST_PATTERN --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
             echo ""
             echo "======================================"
             echo "❌ TESTS FAILED"
@@ -172,6 +218,8 @@ jobs:
 
   coverage:
     name: Code Coverage
+    # Only run coverage on merge to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -180,7 +228,7 @@ jobs:
         working-directory: domain
 
     env:
-      # Use same configuration as test job for accurate coverage
+      # Use same configuration as merge test job for accurate coverage
       PROPCHECK_NUMTESTS: 500
       PROPCHECK_SEARCH_STEPS: 100000
 
