@@ -12,6 +12,7 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
   alias NTBR.Domain.Resources.Network
 
   @moduletag :property
+  @moduletag :integration
   @moduletag :hardware
 
   property "RCP boots successfully with various boot delays",

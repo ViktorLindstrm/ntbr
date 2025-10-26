@@ -15,6 +15,10 @@ defmodule NTBR.Domain.Spinel.DataEncoderTest do
 
   alias NTBR.Domain.Spinel.DataEncoder
 
+  @moduletag :property
+  @moduletag :spinel
+  @moduletag :unit
+
   # ============================================================================
   # UINT8 TESTS
   # ============================================================================

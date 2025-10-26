@@ -6,11 +6,13 @@ on:
     paths:
       - 'domain/**'
       - '.github/workflows/domain-ci.yml'
+      - '.github/scripts/**'
   pull_request:
     branches: [main]
     paths:
       - 'domain/**'
       - '.github/workflows/domain-ci.yml'
+      - '.github/scripts/**'
 
 env:
   MIX_ENV: test
@@ -172,25 +174,37 @@ jobs:
             TEST_DESC="${{ steps.detect-tests.outputs.description }}"
             if [ -n "$TEST_PATTERN" ]; then
               echo "  - Running: $TEST_DESC"
-              echo "  - Pattern: $TEST_PATTERN"
+              echo "  - Test selection: $TEST_PATTERN"
             else
-              echo "  - Running: All tests (detection failed or no pattern)"
-              TEST_PATTERN="test/ntbr/domain/"
+              echo "  - Running: All tests (no specific tags)"
+              TEST_PATTERN=""
             fi
           else
             echo "  - Mode: Merge (thorough testing - all tests)"
-            TEST_PATTERN="test/ntbr/domain/"
+            TEST_PATTERN=""
           fi
           echo "======================================"
 
-          # Run tests with the determined pattern
-          mix test $TEST_PATTERN --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
-            echo ""
-            echo "======================================"
-            echo "❌ TESTS FAILED"
-            echo "======================================"
-            exit 1
-          }
+          # Run tests with the determined pattern (tags or all tests)
+          # If TEST_PATTERN is empty, run all tests
+          # If TEST_PATTERN contains --only flags, use them for tag-based filtering
+          if [ -z "$TEST_PATTERN" ]; then
+            mix test test/ntbr/domain/ --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+              echo ""
+              echo "======================================"
+              echo "❌ TESTS FAILED"
+              echo "======================================"
+              exit 1
+            }
+          else
+            mix test test/ntbr/domain/ $TEST_PATTERN --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+              echo ""
+              echo "======================================"
+              echo "❌ TESTS FAILED"
+              echo "======================================"
+              exit 1
+            }
+          fi
           echo ""
           echo "======================================"
           echo "✅ ALL TESTS PASSED"

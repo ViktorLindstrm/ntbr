@@ -12,6 +12,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
   alias NTBR.Domain.Spinel.Frame
 
   @moduletag :property
+  @moduletag :integration
   @moduletag :regression
 
   property "network name validation catches ALL invalid inputs",

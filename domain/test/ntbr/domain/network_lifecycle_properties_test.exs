@@ -11,6 +11,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   alias NTBR.Domain.Spinel.Client
 
   @moduletag :property
+  @moduletag :integration
   @moduletag :lifecycle
 
   property "network formation follows valid state transition sequences",

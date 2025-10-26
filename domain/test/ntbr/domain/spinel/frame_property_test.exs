@@ -6,6 +6,7 @@ defmodule NTBR.Domain.Spinel.FramePropertyTest do
   alias NTBR.Domain.Spinel.{Frame, Property}
 
   @moduletag :property
+  @moduletag :spinel
 
   # Generators
 

@@ -5,6 +5,10 @@ defmodule NTBR.Domain.Spinel.CommandTest do
 
   alias NTBR.Domain.Spinel.Command
 
+  @moduletag :property
+  @moduletag :spinel
+  @moduletag :unit
+
   # Property-based test generators
 
   defp command_atom_gen do

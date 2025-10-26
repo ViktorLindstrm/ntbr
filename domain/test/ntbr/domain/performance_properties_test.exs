@@ -12,6 +12,7 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
   alias NTBR.Domain.Spinel.Frame
 
   @moduletag :property
+  @moduletag :integration
   @moduletag :performance
 
   property "frame encoding throughput scales linearly with quantity",

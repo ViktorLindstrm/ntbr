@@ -8,6 +8,10 @@ defmodule NTBR.Domain.Validations.BinarySizeTest do
 
   alias NTBR.Domain.Validations.BinarySize
 
+  @moduletag :property
+  @moduletag :validations
+  @moduletag :unit
+
   # Create a test changeset helper
   defp mock_changeset(attributes) do
     # Simple struct to simulate Ash.Changeset behavior
