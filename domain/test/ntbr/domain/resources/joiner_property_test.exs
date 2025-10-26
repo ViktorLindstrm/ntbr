@@ -152,7 +152,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     end
   end
 
-  property "eui64 must be exactly 8 bytes when provided" do
+  property "eui64 must be exactly 8 bytes for create action" do
     forall eui_size <- integer(0, 16) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
@@ -167,9 +167,9 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
       result = Joiner.create(attrs)
 
       case eui_size do
+        # Only 8 bytes is valid for :create action (joiner.ex:315-319)
         8 -> match?({:ok, _}, result)
-        # nil is allowed (wildcard)
-        0 -> match?({:ok, _}, result)
+        # nil requires :create_any action for wildcard joiners
         _ -> match?({:error, _}, result)
       end
     end
