@@ -280,19 +280,43 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
   end
 
   property "complete is only valid from joining state" do
-    {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+    forall invalid_state <- oneof([:pending, :failed, :expired, :joined]) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
-    # Create in pending state
-    {:ok, joiner} =
-      Joiner.create(%{
-        network_id: network.id,
-        eui64: :crypto.strong_rand_bytes(8),
-        pskd: "TEST1234"
-      })
+      # Create joiner
+      {:ok, joiner} =
+        Joiner.create(%{
+          network_id: network.id,
+          eui64: :crypto.strong_rand_bytes(8),
+          pskd: "TEST1234"
+        })
 
-    # Try to complete without starting - should fail because complete requires joining state
-    result = Joiner.complete(joiner)
-    match?({:error, _}, result)
+      # Put joiner in invalid state for complete transition
+      joiner =
+        case invalid_state do
+          :pending ->
+            # Already in pending
+            joiner
+
+          :failed ->
+            {:ok, failed} = Joiner.fail(joiner)
+            failed
+
+          :expired ->
+            {:ok, expired} = Joiner.expire(joiner)
+            expired
+
+          :joined ->
+            # Start then complete to get to joined state
+            {:ok, joining} = Joiner.start(joiner)
+            {:ok, joined} = Joiner.complete(joining)
+            joined
+        end
+
+      # Try to complete from invalid state - should fail
+      result = Joiner.complete(joiner)
+      match?({:error, _}, result)
+    end
   end
 
   # ============================================================================
