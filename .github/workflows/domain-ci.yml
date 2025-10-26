@@ -88,7 +88,7 @@ jobs:
   tests:
     name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: ${{ github.event_name == 'pull_request' && '15' || '45' }}
 
     strategy:
       matrix:
@@ -100,9 +100,11 @@ jobs:
         working-directory: domain
 
     env:
-      # PropCheck configuration for CI - thorough property-based testing
-      PROPCHECK_NUMTESTS: 500
-      PROPCHECK_SEARCH_STEPS: 100000
+      # PropCheck configuration for CI
+      # PR: Faster feedback with reduced test cases (100)
+      # Merge: Thorough testing with full test cases (500)
+      PROPCHECK_NUMTESTS: ${{ github.event_name == 'pull_request' && '100' || '500' }}
+      PROPCHECK_SEARCH_STEPS: ${{ github.event_name == 'pull_request' && '50000' || '100000' }}
 
     steps:
       - name: Checkout code
@@ -134,9 +136,15 @@ jobs:
         run: |
           echo "======================================"
           echo "Running Property-Based Test Suite"
+          echo "Event: ${{ github.event_name }}"
           echo "Configuration:"
           echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
           echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "  - Mode: PR (fast feedback)"
+          else
+            echo "  - Mode: Merge (thorough testing)"
+          fi
           echo "======================================"
           mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
             echo ""
@@ -172,6 +180,8 @@ jobs:
 
   coverage:
     name: Code Coverage
+    # Only run coverage on merge to main, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -180,7 +190,7 @@ jobs:
         working-directory: domain
 
     env:
-      # Use same configuration as test job for accurate coverage
+      # Use same configuration as merge test job for accurate coverage
       PROPCHECK_NUMTESTS: 500
       PROPCHECK_SEARCH_STEPS: 100000
 
