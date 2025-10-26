@@ -108,7 +108,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     end
   end
 
-  property "PSKD should be alphanumeric" do
+  property "PSKD validation matches implementation constraints" do
     forall pskd <- pskd_candidate() do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
@@ -120,16 +120,14 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
 
       result = Joiner.create(attrs)
 
-      # Check if pskd is alphanumeric and correct length
-      valid =
-        String.match?(pskd, ~r/^[A-Z0-9]+$/i) and
-          String.length(pskd) >= 6 and
-          String.length(pskd) <= 32
+      # Implementation only validates length (joiner.ex:82)
+      # NOTE: Description says "base32" but no character validation is implemented
+      pskd_len = String.length(pskd)
+      valid_length = pskd_len >= 6 and pskd_len <= 32
 
-      case valid do
+      case valid_length do
         true -> match?({:ok, _}, result)
-        # May fail or succeed depending on validation
-        false -> true
+        false -> match?({:error, _}, result)
       end
     end
   end
