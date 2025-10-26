@@ -24,6 +24,7 @@ env:
 jobs:
   quality:
     name: Code Quality (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    needs: tests
     runs-on: ubuntu-latest
 
     strategy:
@@ -211,6 +212,7 @@ jobs:
 
   assets:
     name: Assets Build Test
+    needs: tests
     runs-on: ubuntu-latest
 
     steps:
