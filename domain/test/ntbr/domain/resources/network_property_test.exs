@@ -456,7 +456,7 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
     oneof([
       {:detached, :attach},
       {:child, :promote},
-      {:router, :promote},
+      {:router, :become_leader},
       {:leader, :demote},
       {:router, :demote}
     ])
@@ -497,6 +497,9 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   end
   defp apply_transition(network, {_from, :promote}) do
     Network.promote(network)
+  end
+  defp apply_transition(network, {_from, :become_leader}) do
+    Network.become_leader(network)
   end
   defp apply_transition(network, {_from, :demote}) do
     Network.demote(network)
