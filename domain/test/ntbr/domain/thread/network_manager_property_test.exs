@@ -114,9 +114,9 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
           end)
         end)
 
-      results = Task.await_many(tasks, 5000)
+      results = Enum.map(tasks, &Task.await(&1, 5000))
 
-      Network.destroy(network)
+      Network.delete(network)
       # All completed without crashing
       true
     end
@@ -142,7 +142,7 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
       Process.sleep(100)
 
       # Verify devices created
-      devices = Device.by_network(network.id)
+      {:ok, devices} = Device.by_network(network.id)
 
       # Should have routers + children
       expected_count = length(router_list) + length(child_list)

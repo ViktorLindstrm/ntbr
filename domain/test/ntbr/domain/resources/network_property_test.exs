@@ -373,14 +373,12 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
       original_pan = network.pan_id
       original_xpan = network.extended_pan_id
       
-      # Generate updates inline
+      # Generate updates inline (using regular Elixir, not PropCheck generators)
       updates = Enum.map(1..update_count, fn _ ->
-        %{
-          name: oneof([nil, random_string(Enum.random(1..16))]),
-          channel: oneof([nil, Enum.random(11..26)])
-        }
-        |> Enum.reject(fn {_, v} -> is_nil(v) end)
-        |> Map.new()
+        attrs = []
+        attrs = if Enum.random([true, false]), do: [{:name, random_string(Enum.random(1..16))} | attrs], else: attrs
+        attrs = if Enum.random([true, false]), do: [{:channel, Enum.random(11..26)} | attrs], else: attrs
+        Map.new(attrs)
       end)
       
       # Apply multiple updates

@@ -645,16 +645,22 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
   end
 
   defp network_partition_gen do
-    %{
-      fake_count: integer(5, 20),
-      isolation_type: oneof([:full, :partial])
-    }
+    let {fake_count, isolation_type} <- {integer(5, 20), oneof([:full, :partial])} do
+      %{
+        fake_count: fake_count,
+        isolation_type: isolation_type
+      }
+    end
   end
 
   defp state_conflict_gen do
-    %{
-      conflicting_states: vector(integer(3, 10), oneof([:child, :router, :detached]))
-    }
+    let count <- integer(3, 10) do
+      let conflicting_states <- vector(count, oneof([:child, :router, :detached])) do
+        %{
+          conflicting_states: conflicting_states
+        }
+      end
+    end
   end
 
   defp frame_sequence_gen(min, max) do
