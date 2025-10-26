@@ -501,7 +501,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
   end
 
   property "joiner can be updated only in active states" do
-    forall new_timeout <- integer(30, 600) do
+    forall {state_type, new_timeout} <- {oneof([:active, :inactive]), integer(30, 600)} do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
       {:ok, joiner} =
@@ -511,9 +511,44 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           pskd: "UPDATE"
         })
 
-      # Update in pending state should work
+      # Get joiner into the desired state
+      joiner =
+        case state_type do
+          :active ->
+            # Test both active states: pending (already there) or joining
+            if :rand.uniform(2) == 1 do
+              joiner  # Keep in pending
+            else
+              {:ok, joining} = Joiner.start(joiner)
+              joining
+            end
+
+          :inactive ->
+            # Test inactive states: joined, failed, or expired
+            case :rand.uniform(3) do
+              1 ->
+                {:ok, joining} = Joiner.start(joiner)
+                {:ok, joined} = Joiner.complete(joining)
+                joined
+
+              2 ->
+                {:ok, failed} = Joiner.fail(joiner)
+                failed
+
+              3 ->
+                {:ok, expired} = Joiner.expire(joiner)
+                expired
+            end
+        end
+
+      # Try to update
       result = Joiner.update(joiner, %{timeout: new_timeout})
-      match?({:ok, _}, result)
+
+      # Verify according to state (joiner.ex:389-397)
+      case state_type do
+        :active -> match?({:ok, _}, result)
+        :inactive -> match?({:error, _}, result)
+      end
     end
   end
 
