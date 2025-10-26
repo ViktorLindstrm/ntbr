@@ -144,11 +144,11 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   end
 
   property "network_name must be between 1 and 16 characters" do
-    forall name_len <- integer(1, 50) do
+    forall name_len <- integer(0, 50) do
       name = random_string(name_len)
       attrs = %{name: "Test", network_name: name, channel: 15}
       result = Network.create(attrs)
-      
+
       len = String.length(name)
       case len do
         n when n >= 1 and n <= 16 -> match?({:ok, _}, result)
