@@ -16,6 +16,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
   alias NTBR.Domain.Resources.{Joiner, Network}
 
   @moduletag :property
+  @moduletag :resources
   @moduletag :joiner
 
   # ============================================================================

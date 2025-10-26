@@ -31,6 +31,7 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
   end
 
   @moduletag :property
+  @moduletag :integration
   @moduletag :thread
   @moduletag :network_manager
 

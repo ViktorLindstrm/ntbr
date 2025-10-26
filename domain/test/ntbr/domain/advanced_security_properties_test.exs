@@ -16,6 +16,8 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
   alias NTBR.Domain.Spinel.{Frame, Client}
 
   @moduletag :property
+  @moduletag :integration
+  @moduletag :security
   @moduletag :advanced_security
   @moduletag :adversarial
 

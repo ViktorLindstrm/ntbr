@@ -9,6 +9,7 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
   alias NTBR.Domain.Resources.{Device, Network}
 
   @moduletag :property
+  @moduletag :resources
   @moduletag :device
 
   # ============================================================================

@@ -9,6 +9,7 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
   alias NTBR.Domain.Resources.{BorderRouter, Network}
 
   @moduletag :property
+  @moduletag :resources
   @moduletag :border_router
 
   # ============================================================================

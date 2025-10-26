@@ -17,6 +17,7 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   alias NTBR.Domain.Resources.Network
 
   @moduletag :property
+  @moduletag :resources
   @moduletag :network
 
   # ============================================================================

@@ -6,6 +6,10 @@ defmodule NTBR.Domain.Spinel.FrameTest do
   alias NTBR.Domain.Spinel.Frame
   import Bitwise
 
+  @moduletag :property
+  @moduletag :spinel
+  @moduletag :unit
+
   # Property-based test generators
 
   defp tid_gen do

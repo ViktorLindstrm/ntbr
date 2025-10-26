@@ -20,6 +20,8 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
   alias NTBR.Domain.Spinel.{Frame, Client}
 
   @moduletag :property
+  @moduletag :integration
+  @moduletag :security
   @moduletag :security_chaos
   @moduletag :adversarial
 
