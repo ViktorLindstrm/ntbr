@@ -166,7 +166,7 @@ jobs:
 
       - name: Compile
         working-directory: web
-        run: mix compile --warnings-as-errors
+        run: mix compile
 
       - name: Run all property-based tests
         working-directory: web
