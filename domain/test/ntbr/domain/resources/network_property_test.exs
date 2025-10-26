@@ -327,12 +327,17 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   end
 
   property "invalid state transitions fail" do
-    # Try to promote from detached (should fail)
-    {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+    forall transition <- invalid_transition() do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
-    result = Network.promote(network)
+      # Put network in correct starting state
+      network = setup_for_transition(network, transition)
 
-    match?({:error, _}, result)
+      # Attempt invalid transition
+      result = apply_transition(network, transition)
+
+      match?({:error, _}, result)
+    end
   end
 
   # ============================================================================
@@ -470,9 +475,12 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
 
   defp invalid_transition do
     oneof([
-      {:detached, :promote},
-      {:detached, :demote},
-      {:child, :detach}  # Actually valid, but for example
+      {:detached, :promote},      # promote only valid from :child
+      {:detached, :demote},       # demote only valid from :router/:leader
+      {:detached, :become_leader}, # become_leader only valid from :router/:child
+      {:router, :attach},         # attach only valid from :detached/:disabled
+      {:child, :attach},          # attach only valid from :detached/:disabled
+      {:leader, :promote}         # promote only valid from :child
     ])
   end
 
