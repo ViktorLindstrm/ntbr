@@ -43,6 +43,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -50,9 +52,10 @@ jobs:
           path: |
             domain/deps
             domain/_build
-          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          key: ${{ runner.os }}-domain-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-domain-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-domain-mix-
 
       - name: Install dependencies
         run: mix deps.get
@@ -77,9 +80,10 @@ jobs:
         id: plt-cache
         with:
           path: domain/priv/plts
-          key: ${{ runner.os }}-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          key: ${{ runner.os }}-domain-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-domain-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-domain-plt-
 
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
@@ -143,6 +147,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -150,9 +156,10 @@ jobs:
           path: |
             domain/deps
             domain/_build
-          key: ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
+          key: ${{ runner.os }}-domain-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('domain/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-domain-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-domain-mix-
 
       - name: Install dependencies
         run: mix deps.get

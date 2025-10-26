@@ -41,6 +41,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -51,6 +53,7 @@ jobs:
           key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-web-mix-
 
       - name: Install core dependencies
         working-directory: core
@@ -131,6 +134,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -141,6 +146,7 @@ jobs:
           key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-web-mix-
 
       - name: Install core dependencies
         working-directory: core
@@ -224,6 +230,8 @@ jobs:
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+          install-rebar: true
+          install-hex: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -239,6 +247,17 @@ jobs:
           key: ${{ runner.os }}-web-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-web-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+            ${{ runner.os }}-web-mix-
+
+      - name: Cache asset binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            _build/esbuild-*
+            _build/tailwind-*
+          key: ${{ runner.os }}-asset-binaries-${{ hashFiles('web/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-asset-binaries-
 
       - name: Install dependencies
         working-directory: web

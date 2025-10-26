@@ -41,6 +41,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -51,6 +53,7 @@ jobs:
           key: ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-infra-mix-
 
       - name: Install dependencies
         run: mix deps.get
@@ -76,6 +79,7 @@ jobs:
           key: ${{ runner.os }}-infra-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-infra-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-infra-plt-
 
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
@@ -108,6 +112,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -118,6 +124,7 @@ jobs:
           key: ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('infra/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-infra-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
+            ${{ runner.os }}-infra-mix-
 
       - name: Install dependencies
         run: mix deps.get
@@ -168,6 +175,8 @@ jobs:
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
