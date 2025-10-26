@@ -108,6 +108,7 @@ jobs:
 
   tests:
     name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -211,6 +212,7 @@ jobs:
 
   assets:
     name: Assets Build Test
+    needs: quality
     runs-on: ubuntu-latest
 
     steps:

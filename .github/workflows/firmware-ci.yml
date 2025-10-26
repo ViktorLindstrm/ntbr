@@ -93,6 +93,7 @@ jobs:
 
   test:
     name: Tests on Host (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    needs: quality
     runs-on: ubuntu-latest
 
     strategy:
@@ -154,6 +155,7 @@ jobs:
 
   firmware-build:
     name: Firmware Build for ${{ matrix.target }}
+    needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
