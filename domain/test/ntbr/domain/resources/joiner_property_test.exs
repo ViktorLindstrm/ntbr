@@ -367,7 +367,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
       # Create joiners in different states
-      {:ok, _pending} =
+      {:ok, pending} =
         Joiner.create(%{
           network_id: network.id,
           eui64: :crypto.strong_rand_bytes(8),
@@ -381,7 +381,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           pskd: "JOINING1"
         })
 
-      {:ok, _joining} = Joiner.start(joiner2)
+      {:ok, joining} = Joiner.start(joiner2)
 
       {:ok, joiner3} =
         Joiner.create(%{
@@ -393,12 +393,21 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
       {:ok, joining3} = Joiner.start(joiner3)
       {:ok, _joined} = Joiner.complete(joining3)
 
-      # Query active would return 2 (pending + joining)
-      # {:ok, active} = Joiner.active()
-      # length(active) == 2
+      # Query active joiners - should return only pending and joining (not joined)
+      {:ok, active} = Joiner.active()
 
-      # Placeholder
-      true
+      # Should have exactly 2 active joiners
+      count_match = length(active) == 2
+
+      # Should contain our pending and joining joiners
+      active_ids = Enum.map(active, & &1.id) |> MapSet.new()
+      has_pending = MapSet.member?(active_ids, pending.id)
+      has_joining = MapSet.member?(active_ids, joining.id)
+
+      # All active joiners should be in pending or joining state
+      all_active_states = Enum.all?(active, fn j -> j.state in [:pending, :joining] end)
+
+      count_match and has_pending and has_joining and all_active_states
     end
   end
 
@@ -415,11 +424,26 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           pskd: "FINDME"
         })
 
-      # Query by_eui64 would find this joiner
-      # {:ok, [found]} = Joiner.by_eui64(eui64)
-      # found.id == joiner.id
+      # Create another joiner with different EUI-64 to ensure query is specific
+      {:ok, _other} =
+        Joiner.create(%{
+          network_id: network.id,
+          eui64: :crypto.strong_rand_bytes(8),
+          pskd: "OTHER"
+        })
 
-      joiner.eui64 == eui64
+      # Query by_eui64 should find only the specific joiner
+      {:ok, found} = Joiner.by_eui64(eui64)
+
+      # Should find exactly one joiner
+      count_match = length(found) == 1
+
+      # Should be the correct joiner
+      first = List.first(found)
+      id_match = first.id == joiner.id
+      eui_match = first.eui64 == eui64
+
+      count_match and id_match and eui_match
     end
   end
 
