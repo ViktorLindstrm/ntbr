@@ -106,33 +106,33 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       
       # Memory usage should not correlate with credential length
       memory_before = :erlang.memory(:total)
-      
-      {:ok, j1} = Joiner.create(%{
+
+      {:ok, _j1} = Joiner.create(%{
         network_id: network.id,
         eui64: <<1::64>>,
         pskd: short_pskd,
         timeout: 120
       })
-      
-      memory_short = :erlang.memory(:total) - memory_before
-      
-      {:ok, j2} = Joiner.create(%{
+
+      _memory_short = :erlang.memory(:total) - memory_before
+
+      {:ok, _j2} = Joiner.create(%{
         network_id: network.id,
         eui64: <<2::64>>,
         pskd: medium_pskd,
         timeout: 120
       })
-      
-      memory_medium = :erlang.memory(:total) - memory_before
-      
-      {:ok, j3} = Joiner.create(%{
+
+      _memory_medium = :erlang.memory(:total) - memory_before
+
+      {:ok, _j3} = Joiner.create(%{
         network_id: network.id,
         eui64: <<3::64>>,
         pskd: long_pskd,
         timeout: 120
       })
-      
-      memory_long = :erlang.memory(:total) - memory_before
+
+      _memory_long = :erlang.memory(:total) - memory_before
       
       # Memory growth should be roughly linear with credential length
       # (not revealing algorithmic complexity)
