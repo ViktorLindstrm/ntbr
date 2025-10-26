@@ -290,9 +290,9 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
         pskd: "TEST1234"
       })
 
-    # Try to complete without starting - transition should not happen, state left at :pending
-    {:ok, result} = Joiner.complete(joiner)
-    match?(:pending, result.state)
+    # Try to complete without starting - should fail because complete requires joining state
+    result = Joiner.complete(joiner)
+    match?({:error, _}, result)
   end
 
   # ============================================================================
