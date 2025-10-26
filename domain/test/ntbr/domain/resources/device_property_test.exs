@@ -498,6 +498,36 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
     end
   end
 
+  property "only routers and leaders can have children (Thread spec)" do
+    forall parent_type <- oneof([:end_device, :router, :leader, :reed]) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+
+      {:ok, parent} =
+        Device.create(%{
+          network_id: network.id,
+          rloc16: 0x2000,
+          extended_address: :crypto.strong_rand_bytes(8),
+          device_type: parent_type
+        })
+
+      result =
+        Device.create(%{
+          network_id: network.id,
+          rloc16: 0x2001,
+          extended_address: :crypto.strong_rand_bytes(8),
+          device_type: :end_device,
+          parent_id: parent.id
+        })
+
+      case parent_type do
+        # Routers and leaders can have children
+        type when type in [:router, :leader] -> match?({:ok, _}, result)
+        # End devices and REEDs cannot have children (Thread spec)
+        _ -> match?({:error, _}, result)
+      end
+    end
+  end
+
   # ============================================================================
   # CALCULATION PROPERTIES
   # ============================================================================
