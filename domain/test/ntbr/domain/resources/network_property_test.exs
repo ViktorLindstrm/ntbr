@@ -72,12 +72,12 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   property "network auto-generates credentials when not provided" do
     forall attrs <- minimal_network_attrs() do
       {:ok, network} = Network.create(attrs)
-      
-      # Auto-generated fields should be present
+
+      # Auto-generated fields should be present and within valid constraints
       key_valid = byte_size(network.network_key) == 16
-      pan_valid = network.pan_id >= 0 and network.pan_id <= 0xFFFF
+      pan_valid = network.pan_id >= 0 and network.pan_id <= 0xFFFE  # 0xFFFF is broadcast, not allowed
       xpan_valid = byte_size(network.extended_pan_id) == 8
-      
+
       key_valid and pan_valid and xpan_valid
     end
   end
