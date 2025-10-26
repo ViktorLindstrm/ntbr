@@ -445,9 +445,15 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
 
   defp update_network_attrs do
     oneof([
-      %{name: random_string(Enum.random(1..16))},
-      %{channel: Enum.random(11..26)},
-      %{name: random_string(Enum.random(1..16)), channel: Enum.random(11..26)},
+      let name_len <- integer(1, 16) do
+        %{name: random_string(name_len)}
+      end,
+      let channel <- integer(11, 26) do
+        %{channel: channel}
+      end,
+      let {name_len, channel} <- {integer(1, 16), integer(11, 26)} do
+        %{name: random_string(name_len), channel: channel}
+      end,
       %{}  # No updates
     ])
   end
