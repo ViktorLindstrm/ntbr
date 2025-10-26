@@ -442,7 +442,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     end
   end
 
-  property "expired_joiners finds joiners past expiration" do
+  property "start action sets expires_at to future time based on timeout" do
     forall timeout <- integer(30, 600) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
@@ -456,8 +456,15 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
 
       {:ok, started} = Joiner.start(joiner)
 
-      # Expires_at should be in future
-      DateTime.compare(started.expires_at, DateTime.utc_now()) == :gt
+      # Expires_at should be in future (started_at + timeout)
+      in_future = DateTime.compare(started.expires_at, DateTime.utc_now()) == :gt
+
+      # Verify expires_at is correctly calculated from timeout
+      expected_diff = timeout
+      actual_diff = DateTime.diff(started.expires_at, started.started_at, :second)
+      correct_timeout = actual_diff == expected_diff
+
+      in_future and correct_timeout
     end
   end
 
