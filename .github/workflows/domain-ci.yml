@@ -91,7 +91,7 @@ jobs:
   tests:
     name: Property-Based Tests (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ github.event_name == 'pull_request' && '15' || '45' }}
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 15 || 45 }}
 
     strategy:
       matrix:
