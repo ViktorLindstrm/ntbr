@@ -416,6 +416,7 @@ defmodule NTBR.Domain.Resources.Joiner do
     update :complete do
       description("Mark joining as successfully completed")
       require_atomic?(false)
+      change(transition_state(:joined))
 
       change(fn changeset, _context ->
         Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
@@ -425,6 +426,7 @@ defmodule NTBR.Domain.Resources.Joiner do
     update :fail do
       description("Mark joining as failed")
       require_atomic?(false)
+      change(transition_state(:failed))
 
       change(fn changeset, _context ->
         Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())
@@ -434,6 +436,7 @@ defmodule NTBR.Domain.Resources.Joiner do
     update :expire do
       description("Mark joiner credential as expired")
       require_atomic?(false)
+      change(transition_state(:expired))
 
       change(fn changeset, _context ->
         Ash.Changeset.change_attribute(changeset, :completed_at, DateTime.utc_now())

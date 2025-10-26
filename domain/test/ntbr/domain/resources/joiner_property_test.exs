@@ -109,7 +109,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     end
   end
 
-  property "PSKD should be alphanumeric" do
+  property "PSKD validation matches implementation constraints" do
     forall pskd <- pskd_candidate() do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
@@ -121,16 +121,14 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
 
       result = Joiner.create(attrs)
 
-      # Check if pskd is alphanumeric and correct length
-      valid =
-        String.match?(pskd, ~r/^[A-Z0-9]+$/i) and
-          String.length(pskd) >= 6 and
-          String.length(pskd) <= 32
+      # Implementation only validates length (joiner.ex:82)
+      # NOTE: Description says "base32" but no character validation is implemented
+      pskd_len = String.length(pskd)
+      valid_length = pskd_len >= 6 and pskd_len <= 32
 
-      case valid do
+      case valid_length do
         true -> match?({:ok, _}, result)
-        # May fail or succeed depending on validation
-        false -> true
+        false -> match?({:error, _}, result)
       end
     end
   end
@@ -155,7 +153,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     end
   end
 
-  property "eui64 must be exactly 8 bytes when provided" do
+  property "eui64 must be exactly 8 bytes for create action" do
     forall eui_size <- integer(0, 16) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
@@ -170,9 +168,9 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
       result = Joiner.create(attrs)
 
       case eui_size do
+        # Only 8 bytes is valid for :create action (joiner.ex:315-319)
         8 -> match?({:ok, _}, result)
-        # nil is allowed (wildcard)
-        0 -> match?({:ok, _}, result)
+        # nil requires :create_any action for wildcard joiners
         _ -> match?({:error, _}, result)
       end
     end
@@ -281,19 +279,43 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
   end
 
   property "complete is only valid from joining state" do
-    {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+    forall invalid_state <- oneof([:pending, :failed, :expired, :joined]) do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
-    # Create in pending state
-    {:ok, joiner} =
-      Joiner.create(%{
-        network_id: network.id,
-        eui64: :crypto.strong_rand_bytes(8),
-        pskd: "TEST1234"
-      })
+      # Create joiner
+      {:ok, joiner} =
+        Joiner.create(%{
+          network_id: network.id,
+          eui64: :crypto.strong_rand_bytes(8),
+          pskd: "TEST1234"
+        })
 
-    # Try to complete without starting - transition should not happen, state left at :pending
-    {:ok, result} = Joiner.complete(joiner)
-    match?(:pending, result.state)
+      # Put joiner in invalid state for complete transition
+      joiner =
+        case invalid_state do
+          :pending ->
+            # Already in pending
+            joiner
+
+          :failed ->
+            {:ok, failed} = Joiner.fail(joiner)
+            failed
+
+          :expired ->
+            {:ok, expired} = Joiner.expire(joiner)
+            expired
+
+          :joined ->
+            # Start then complete to get to joined state
+            {:ok, joining} = Joiner.start(joiner)
+            {:ok, joined} = Joiner.complete(joining)
+            joined
+        end
+
+      # Try to complete from invalid state - should fail
+      result = Joiner.complete(joiner)
+      match?({:error, _}, result)
+    end
   end
 
   # ============================================================================
@@ -319,19 +341,16 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     forall pskd <- valid_pskd() do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
-      # Try to create specific joiner without eui64
+      # Try to create specific joiner without eui64 - should fail
       result =
         Joiner.create(%{
           network_id: network.id,
           pskd: pskd
         })
 
-      # Should fail or require eui64
-      case result do
-        {:error, _} -> true
-        # If it succeeds, eui64 was generated
-        {:ok, joiner} -> not is_nil(joiner.eui64)
-      end
+      # Must fail with error - eui64 is required for create action (joiner.ex:315-316)
+      # Use create_any for wildcard joiners
+      match?({:error, _}, result)
     end
   end
 
@@ -344,7 +363,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
       # Create joiners in different states
-      {:ok, _pending} =
+      {:ok, pending} =
         Joiner.create(%{
           network_id: network.id,
           eui64: :crypto.strong_rand_bytes(8),
@@ -358,7 +377,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           pskd: "JOINING1"
         })
 
-      {:ok, _joining} = Joiner.start(joiner2)
+      {:ok, joining} = Joiner.start(joiner2)
 
       {:ok, joiner3} =
         Joiner.create(%{
@@ -370,12 +389,21 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
       {:ok, joining3} = Joiner.start(joiner3)
       {:ok, _joined} = Joiner.complete(joining3)
 
-      # Query active would return 2 (pending + joining)
-      # {:ok, active} = Joiner.active()
-      # length(active) == 2
+      # Query active joiners - should return only pending and joining (not joined)
+      {:ok, active} = Joiner.active()
 
-      # Placeholder
-      true
+      # Should have exactly 2 active joiners
+      count_match = length(active) == 2
+
+      # Should contain our pending and joining joiners
+      active_ids = Enum.map(active, & &1.id) |> MapSet.new()
+      has_pending = MapSet.member?(active_ids, pending.id)
+      has_joining = MapSet.member?(active_ids, joining.id)
+
+      # All active joiners should be in pending or joining state
+      all_active_states = Enum.all?(active, fn j -> j.state in [:pending, :joining] end)
+
+      count_match and has_pending and has_joining and all_active_states
     end
   end
 
@@ -392,15 +420,30 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           pskd: "FINDME"
         })
 
-      # Query by_eui64 would find this joiner
-      # {:ok, [found]} = Joiner.by_eui64(eui64)
-      # found.id == joiner.id
+      # Create another joiner with different EUI-64 to ensure query is specific
+      {:ok, _other} =
+        Joiner.create(%{
+          network_id: network.id,
+          eui64: :crypto.strong_rand_bytes(8),
+          pskd: "OTHER"
+        })
 
-      joiner.eui64 == eui64
+      # Query by_eui64 should find only the specific joiner
+      {:ok, found} = Joiner.by_eui64(eui64)
+
+      # Should find exactly one joiner
+      count_match = length(found) == 1
+
+      # Should be the correct joiner
+      first = List.first(found)
+      id_match = first.id == joiner.id
+      eui_match = first.eui64 == eui64
+
+      count_match and id_match and eui_match
     end
   end
 
-  property "expired_joiners finds joiners past expiration" do
+  property "start action sets expires_at to future time based on timeout" do
     forall timeout <- integer(30, 600) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
@@ -414,8 +457,15 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
 
       {:ok, started} = Joiner.start(joiner)
 
-      # Expires_at should be in future
-      DateTime.compare(started.expires_at, DateTime.utc_now()) == :gt
+      # Expires_at should be in future (started_at + timeout)
+      in_future = DateTime.compare(started.expires_at, DateTime.utc_now()) == :gt
+
+      # Verify expires_at is correctly calculated from timeout
+      expected_diff = timeout
+      actual_diff = DateTime.diff(started.expires_at, started.started_at, :second)
+      correct_timeout = actual_diff == expected_diff
+
+      in_future and correct_timeout
     end
   end
 
@@ -459,7 +509,7 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
   end
 
   property "joiner can be updated only in active states" do
-    forall new_timeout <- integer(30, 600) do
+    forall {state_type, new_timeout} <- {oneof([:active, :inactive]), integer(30, 600)} do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
       {:ok, joiner} =
@@ -469,9 +519,44 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
           pskd: "UPDATE"
         })
 
-      # Update in pending state should work
+      # Get joiner into the desired state
+      joiner =
+        case state_type do
+          :active ->
+            # Test both active states: pending (already there) or joining
+            if :rand.uniform(2) == 1 do
+              joiner  # Keep in pending
+            else
+              {:ok, joining} = Joiner.start(joiner)
+              joining
+            end
+
+          :inactive ->
+            # Test inactive states: joined, failed, or expired
+            case :rand.uniform(3) do
+              1 ->
+                {:ok, joining} = Joiner.start(joiner)
+                {:ok, joined} = Joiner.complete(joining)
+                joined
+
+              2 ->
+                {:ok, failed} = Joiner.fail(joiner)
+                failed
+
+              3 ->
+                {:ok, expired} = Joiner.expire(joiner)
+                expired
+            end
+        end
+
+      # Try to update
       result = Joiner.update(joiner, %{timeout: new_timeout})
-      match?({:ok, _}, result)
+
+      # Verify according to state (joiner.ex:389-397)
+      case state_type do
+        :active -> match?({:ok, _}, result)
+        :inactive -> match?({:error, _}, result)
+      end
     end
   end
 
