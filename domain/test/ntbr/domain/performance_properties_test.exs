@@ -1,11 +1,10 @@
 defmodule NTBR.Domain.Test.PerformancePropertiesTest do
-  @moduledoc """
-  Property-based performance tests with varying workloads.
-  
-  CONVERTED FROM: performance_benchmarks.exs
-  
-  Tests performance characteristics across different scales.
-  """
+  @moduledoc false
+  # Property-based performance tests with varying workloads.
+  #
+  # CONVERTED FROM: performance_benchmarks.exs
+  #
+  # Tests performance characteristics across different scales.
   use ExUnit.Case, async: false
   use PropCheck
 

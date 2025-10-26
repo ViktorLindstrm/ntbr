@@ -1,14 +1,13 @@
 defmodule NTBR.Domain.Resources.NetworkPropertyTest do
-  @moduledoc """
-  Property-based tests for Network resource.
-  
-  Tests progress from basic to advanced:
-  1. Basic CRUD operations
-  2. Attribute constraints validation
-  3. State machine transitions
-  4. Calculations
-  5. Complex validations
-  """
+  @moduledoc false
+  # Property-based tests for Network resource.
+  #
+  # Tests progress from basic to advanced:
+  # 1. Basic CRUD operations
+  # 2. Attribute constraints validation
+  # 3. State machine transitions
+  # 4. Calculations
+  # 5. Complex validations
   use ExUnit.Case, async: true
   use PropCheck
   
@@ -73,12 +72,12 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   property "network auto-generates credentials when not provided" do
     forall attrs <- minimal_network_attrs() do
       {:ok, network} = Network.create(attrs)
-      
-      # Auto-generated fields should be present
+
+      # Auto-generated fields should be present and within valid constraints
       key_valid = byte_size(network.network_key) == 16
-      pan_valid = network.pan_id >= 0 and network.pan_id <= 0xFFFF
+      pan_valid = network.pan_id >= 0 and network.pan_id <= 0xFFFE  # 0xFFFF is broadcast, not allowed
       xpan_valid = byte_size(network.extended_pan_id) == 8
-      
+
       key_valid and pan_valid and xpan_valid
     end
   end
@@ -145,11 +144,11 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   end
 
   property "network_name must be between 1 and 16 characters" do
-    forall name_len <- integer(1, 50) do
+    forall name_len <- integer(0, 50) do
       name = random_string(name_len)
       attrs = %{name: "Test", network_name: name, channel: 15}
       result = Network.create(attrs)
-      
+
       len = String.length(name)
       case len do
         n when n >= 1 and n <= 16 -> match?({:ok, _}, result)
@@ -328,12 +327,17 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   end
 
   property "invalid state transitions fail" do
-    # Try to promote from detached (should fail)
-    {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+    forall transition <- invalid_transition() do
+      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
-    result = Network.promote(network)
+      # Put network in correct starting state
+      network = setup_for_transition(network, transition)
 
-    match?({:error, _}, result)
+      # Attempt invalid transition
+      result = apply_transition(network, transition)
+
+      match?({:error, _}, result)
+    end
   end
 
   # ============================================================================
@@ -374,14 +378,12 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
       original_pan = network.pan_id
       original_xpan = network.extended_pan_id
       
-      # Generate updates inline
+      # Generate updates inline (using regular Elixir, not PropCheck generators)
       updates = Enum.map(1..update_count, fn _ ->
-        %{
-          name: oneof([nil, random_string(Enum.random(1..16))]),
-          channel: oneof([nil, Enum.random(11..26)])
-        }
-        |> Enum.reject(fn {_, v} -> is_nil(v) end)
-        |> Map.new()
+        attrs = []
+        attrs = if Enum.random([true, false]), do: [{:name, random_string(Enum.random(1..16))} | attrs], else: attrs
+        attrs = if Enum.random([true, false]), do: [{:channel, Enum.random(11..26)} | attrs], else: attrs
+        Map.new(attrs)
       end)
       
       # Apply multiple updates
@@ -448,9 +450,15 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
 
   defp update_network_attrs do
     oneof([
-      %{name: random_string(Enum.random(1..16))},
-      %{channel: Enum.random(11..26)},
-      %{name: random_string(Enum.random(1..16)), channel: Enum.random(11..26)},
+      let name_len <- integer(1, 16) do
+        %{name: random_string(name_len)}
+      end,
+      let channel <- integer(11, 26) do
+        %{channel: channel}
+      end,
+      let {name_len, channel} <- {integer(1, 16), integer(11, 26)} do
+        %{name: random_string(name_len), channel: channel}
+      end,
       %{}  # No updates
     ])
   end
@@ -459,7 +467,7 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
     oneof([
       {:detached, :attach},
       {:child, :promote},
-      {:router, :promote},
+      {:router, :become_leader},
       {:leader, :demote},
       {:router, :demote}
     ])
@@ -467,9 +475,12 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
 
   defp invalid_transition do
     oneof([
-      {:detached, :promote},
-      {:detached, :demote},
-      {:child, :detach}  # Actually valid, but for example
+      {:detached, :promote},      # promote only valid from :child
+      {:detached, :demote},       # demote only valid from :router/:leader
+      {:detached, :become_leader}, # become_leader only valid from :router/:child
+      {:router, :attach},         # attach only valid from :detached/:disabled
+      {:child, :attach},          # attach only valid from :detached/:disabled
+      {:leader, :promote}         # promote only valid from :child
     ])
   end
 
@@ -500,6 +511,9 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
   end
   defp apply_transition(network, {_from, :promote}) do
     Network.promote(network)
+  end
+  defp apply_transition(network, {_from, :become_leader}) do
+    Network.become_leader(network)
   end
   defp apply_transition(network, {_from, :demote}) do
     Network.demote(network)

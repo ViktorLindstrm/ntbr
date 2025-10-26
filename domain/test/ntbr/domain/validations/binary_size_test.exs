@@ -1,9 +1,8 @@
 defmodule NTBR.Domain.Validations.BinarySizeTest do
-  @moduledoc """
-  Tests for BinarySize validation helper.
-
-  Tests validation of binary attribute sizes in Ash resources.
-  """
+  @moduledoc false
+  # Tests for BinarySize validation helper.
+  #
+  # Tests validation of binary attribute sizes in Ash resources.
   use ExUnit.Case, async: true
   use PropCheck
 

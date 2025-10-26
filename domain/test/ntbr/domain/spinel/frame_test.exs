@@ -1,4 +1,5 @@
 defmodule NTBR.Domain.Spinel.FrameTest do
+  @moduledoc false
   use ExUnit.Case, async: true
   use PropCheck
 
@@ -255,6 +256,7 @@ defmodule NTBR.Domain.Spinel.FrameTest do
 end
 
 defmodule NTBR.Domain.Spinel.DataEncoderTest do
+  @moduledoc false
   use ExUnit.Case, async: true
   use PropCheck
 

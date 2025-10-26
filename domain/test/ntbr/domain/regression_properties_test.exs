@@ -1,11 +1,10 @@
 defmodule NTBR.Domain.Test.RegressionPropertiesTest do
-  @moduledoc """
-  Property-based tests for historical bugs and edge cases.
-  
-  CONVERTED FROM: regression_tests.exs
-  
-  Tests that past bugs don't reoccur under ANY conditions.
-  """
+  @moduledoc false
+  # Property-based tests for historical bugs and edge cases.
+  #   
+  #   CONVERTED FROM: regression_tests.exs
+  #   
+  #   Tests that past bugs don't reoccur under ANY conditions.
   use ExUnit.Case, async: false
   use PropCheck
 

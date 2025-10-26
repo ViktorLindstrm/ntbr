@@ -1,11 +1,10 @@
 defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
-  @moduledoc """
-  Property-based tests for Thread 1.3 specification compliance.
-  
-  CONVERTED FROM: thread_compliance_tests.exs
-  
-  Tests that Thread spec requirements hold for ALL cases.
-  """
+  @moduledoc false
+  # Property-based tests for Thread 1.3 specification compliance.
+  #
+  # CONVERTED FROM: thread_compliance_tests.exs
+  #
+  # Tests that Thread spec requirements hold for ALL cases.
   use ExUnit.Case, async: false
   use PropCheck
 
@@ -244,9 +243,10 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
   defp valid_thread_transition_gen do
     let count <- integer(3, 15) do
       # Generate valid transition sequences
-      base = [:attach, :promote, :promote]  # detached -> child -> router -> leader
-      extras = List.duplicate(oneof([:demote, :promote]), count - 3)
-      base ++ extras
+      let extras <- vector(count - 3, oneof([:demote, :promote])) do
+        # base: detached -> child -> router -> leader
+        [:attach, :promote, :promote] ++ extras
+      end
     end
   end
 
