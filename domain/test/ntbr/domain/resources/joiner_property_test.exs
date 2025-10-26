@@ -342,19 +342,16 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
     forall pskd <- valid_pskd() do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
-      # Try to create specific joiner without eui64
+      # Try to create specific joiner without eui64 - should fail
       result =
         Joiner.create(%{
           network_id: network.id,
           pskd: pskd
         })
 
-      # Should fail or require eui64
-      case result do
-        {:error, _} -> true
-        # If it succeeds, eui64 was generated
-        {:ok, joiner} -> not is_nil(joiner.eui64)
-      end
+      # Must fail with error - eui64 is required for create action (joiner.ex:315-316)
+      # Use create_any for wildcard joiners
+      match?({:error, _}, result)
     end
   end
 
