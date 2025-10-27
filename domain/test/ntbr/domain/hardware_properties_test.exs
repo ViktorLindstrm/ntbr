@@ -104,17 +104,29 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
       # Configure with delays
       :ok = Client.set_channel(network.channel)
       Process.sleep(Enum.at(timing_delays, 0))
-      
+
       :ok = Client.set_network_key(network.network_key)
       Process.sleep(Enum.at(timing_delays, 1))
-      
+
       :ok = Client.interface_up()
       Process.sleep(Enum.at(timing_delays, 2))
-      
+
       :ok = Client.thread_start()
-      
-      # Should succeed regardless of timing
-      true
+
+      # Verify network formation succeeded despite timing variations
+      # Wait a bit for network to form
+      Process.sleep(100)
+
+      # Check that network is operational
+      formation_result = try do
+        {:ok, role} = Client.get_net_role()
+        # Should have a valid role (not disabled) after formation
+        role != :disabled
+      rescue
+        _ -> false
+      end
+
+      formation_result
     end
   end
 
