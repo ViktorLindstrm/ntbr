@@ -581,12 +581,19 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       # Device creation might succeed, but joining should require PSKD
       case result do
         {:ok, device} ->
-          # Device created, but should not be authenticated
-          # Check if there's a linked joiner
-          true  # Creation is ok, authentication is separate
-        
+          # Device created without commissioning
+          # Verify no joiner exists for this device (no PSKD authorization)
+          joiners = Joiner.by_network!(network.id)
+          matching_joiner = Enum.find(joiners, fn j ->
+            j.eui64 == unauthorized_attempt.eui64
+          end)
+
+          # No matching joiner should exist (device not properly authorized)
+          is_nil(matching_joiner)
+
         {:error, _} ->
-          true  # Rejected is also fine
+          # Device creation rejected - preferred behavior for unauthorized attempts
+          true
       end
     end
   end

@@ -22,14 +22,18 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
       Process.sleep(boot_delay)
 
       # Should be operational after reasonable delay
-      try do
+      result = try do
         {:ok, version} = Client.get_property(:ncp_version)
         {:ok, caps} = Client.get_property(:caps)
-        
+
         is_binary(version) and is_list(caps)
       rescue
-        _ -> boot_delay < 30  # Expect failures only for very short delays
+        _ -> false
       end
+
+      # Accept result if successful, or if delay was extremely short (< 10ms)
+      # RCP spec requires readiness within reasonable time after reset
+      result or boot_delay < 10
     end
     |> collect(:boot_delay_range, fn delay ->
       cond do

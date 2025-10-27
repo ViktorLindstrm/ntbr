@@ -88,7 +88,6 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # CV should be small (< 15% for constant-time)
       coefficient_of_variation < 0.15
     end
-    |> measure("Timing variance", fn _ -> 0 end)
   end
 
   property "memory access patterns don't leak credential information",
@@ -187,10 +186,21 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # Error messages should be generic (not "not found" vs "unauthorized")
       case {result_exists, result_not_exists} do
         {{:ok, _}, {:error, msg}} ->
-          # Error message shouldn't reveal resource existence
+          # Normal case: existing succeeds, non-existing fails
+          # Error message shouldn't reveal "not found"
           not String.contains?(String.downcase(msg), "not found")
-        
-        _ -> true
+
+        {{:error, msg1}, {:error, msg2}} ->
+          # Both failed: error messages should be identical (no information leak)
+          msg1 == msg2
+
+        {{:ok, _}, {:ok, _}} ->
+          # Both succeeded: non-existing resource shouldn't succeed
+          false
+
+        {{:error, _}, {:ok, _}} ->
+          # Existing failed but non-existing succeeded: wrong behavior
+          false
       end
     end
   end
@@ -232,9 +242,15 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # Not all should succeed (rate limiting or detection)
       # OR system should remain functional despite attack
       devices = Device.by_network!(network.id)
-      
-      # Network should still be queryable
-      is_list(devices) and successful_creates <= sybil_count
+
+      # Network should still be queryable AND
+      # System should block at least some Sybil identities
+      # (successful_creates < sybil_count means rate limiting/detection worked)
+      # OR if all succeeded, at least network size is reasonable
+      is_list(devices) and (
+        successful_creates < sybil_count or
+        length(devices) < sybil_count * 0.9
+      )
     end
     |> measure("Sybil identities attempted", fn count -> count end)
   end
