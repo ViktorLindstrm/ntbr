@@ -93,50 +93,71 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
 
   property "memory access patterns don't leak credential information",
            [:verbose, {:numtests, 100}] do
-    forall credential_length <- integer(6, 32) do
+    forall _scenario <- integer(1, 100) do
       {:ok, network} = Network.create(%{
         name: "MemAccess-#{:rand.uniform(10000)}",
         network_name: "MemAccessNet"
       })
-      
-      # Create credentials of varying lengths
+
+      # Create credentials of varying lengths (6, 16, 32 bytes)
       short_pskd = String.duplicate("A", 6)
       medium_pskd = String.duplicate("B", 16)
       long_pskd = String.duplicate("C", 32)
-      
-      # Memory usage should not correlate with credential length
-      memory_before = :erlang.memory(:total)
 
-      {:ok, _j1} = Joiner.create(%{
+      # Measure memory usage for each credential length
+      # Security property: memory growth should be roughly linear,
+      # not revealing algorithmic complexity or credential patterns
+
+      memory_before_short = :erlang.memory(:total)
+      {:ok, j1} = Joiner.create(%{
         network_id: network.id,
         eui64: <<1::64>>,
         pskd: short_pskd,
         timeout: 120
       })
+      memory_after_short = :erlang.memory(:total)
+      memory_short = memory_after_short - memory_before_short
 
-      _memory_short = :erlang.memory(:total) - memory_before
-
-      {:ok, _j2} = Joiner.create(%{
+      memory_before_medium = :erlang.memory(:total)
+      {:ok, j2} = Joiner.create(%{
         network_id: network.id,
         eui64: <<2::64>>,
         pskd: medium_pskd,
         timeout: 120
       })
+      memory_after_medium = :erlang.memory(:total)
+      memory_medium = memory_after_medium - memory_before_medium
 
-      _memory_medium = :erlang.memory(:total) - memory_before
-
-      {:ok, _j3} = Joiner.create(%{
+      memory_before_long = :erlang.memory(:total)
+      {:ok, j3} = Joiner.create(%{
         network_id: network.id,
         eui64: <<3::64>>,
         pskd: long_pskd,
         timeout: 120
       })
+      memory_after_long = :erlang.memory(:total)
+      memory_long = memory_after_long - memory_before_long
 
-      _memory_long = :erlang.memory(:total) - memory_before
-      
-      # Memory growth should be roughly linear with credential length
-      # (not revealing algorithmic complexity)
-      true
+      # Clean up
+      Joiner.destroy(j1)
+      Joiner.destroy(j2)
+      Joiner.destroy(j3)
+
+      # Validate linear growth: memory should scale roughly with credential length
+      # Short (6 bytes), Medium (16 bytes), Long (32 bytes)
+      # Expected ratios: 6:16:32 = 1:2.67:5.33
+
+      # Memory differences should exist (storing different lengths)
+      has_memory_variation = memory_short > 0 and memory_medium > 0 and memory_long > 0
+
+      # But differences should be reasonable (not exponential or revealing complexity)
+      # Allow up to 10x variation (very permissive for BEAM memory management)
+      max_memory = max(memory_short, max(memory_medium, memory_long))
+      min_memory = min(memory_short, min(memory_medium, memory_long))
+
+      reasonable_variation = min_memory > 0 and (max_memory / min_memory) < 10
+
+      has_memory_variation and reasonable_variation
     end
   end
 
