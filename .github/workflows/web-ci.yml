@@ -53,7 +53,6 @@ jobs:
           key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-web-mix-
 
       - name: Install core dependencies
         working-directory: core
@@ -146,7 +145,6 @@ jobs:
           key: ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('web/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-web-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-web-mix-
 
       - name: Install core dependencies
         working-directory: core

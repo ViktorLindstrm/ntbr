@@ -53,7 +53,6 @@ jobs:
           key: ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-core-mix-
 
       - name: Install dependencies
         run: mix deps.get
@@ -79,7 +78,6 @@ jobs:
           key: ${{ runner.os }}-core-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-core-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-core-plt-
 
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
@@ -130,7 +128,6 @@ jobs:
           key: ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('core/mix.lock', 'mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-core-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-core-mix-
 
       - name: Install dependencies
         run: mix deps.get

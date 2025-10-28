@@ -68,7 +68,6 @@ jobs:
           key: ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-firmware-mix-
 
       - name: Install dependencies
         run: mix deps.get
@@ -94,7 +93,6 @@ jobs:
           key: ${{ runner.os }}-firmware-plt-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-firmware-plt-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-firmware-plt-
 
       - name: Create PLTs
         if: steps.plt-cache.outputs.cache-hit != 'true'
@@ -153,7 +151,6 @@ jobs:
           key: ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-firmware-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-firmware-mix-
 
       - name: Install dependencies
         run: mix deps.get
@@ -250,8 +247,6 @@ jobs:
           key: ${{ runner.os }}-firmware-${{ matrix.target }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('firmware/mix.lock') }}
           restore-keys: |
             ${{ runner.os }}-firmware-${{ matrix.target }}-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
-            ${{ runner.os }}-firmware-${{ matrix.target }}-mix-
-            ${{ runner.os }}-firmware-mix-
 
       - name: Install dependencies for target
         run: mix deps.get
