@@ -88,55 +88,75 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # CV should be small (< 15% for constant-time)
       coefficient_of_variation < 0.15
     end
-    |> measure("Timing variance", fn _ -> 0 end)
   end
 
   property "memory access patterns don't leak credential information",
            [:verbose, {:numtests, 100}] do
-    forall credential_length <- integer(6, 32) do
+    forall _scenario <- integer(1, 100) do
       {:ok, network} = Network.create(%{
         name: "MemAccess-#{:rand.uniform(10000)}",
         network_name: "MemAccessNet"
       })
-      
-      # Create credentials of varying lengths
+
+      # Create credentials of varying lengths (6, 16, 32 bytes)
       short_pskd = String.duplicate("A", 6)
       medium_pskd = String.duplicate("B", 16)
       long_pskd = String.duplicate("C", 32)
-      
-      # Memory usage should not correlate with credential length
-      memory_before = :erlang.memory(:total)
-      
+
+      # Measure memory usage for each credential length
+      # Security property: memory growth should be roughly linear,
+      # not revealing algorithmic complexity or credential patterns
+
+      memory_before_short = :erlang.memory(:total)
       {:ok, j1} = Joiner.create(%{
         network_id: network.id,
         eui64: <<1::64>>,
         pskd: short_pskd,
         timeout: 120
       })
-      
-      memory_short = :erlang.memory(:total) - memory_before
-      
+      memory_after_short = :erlang.memory(:total)
+      memory_short = memory_after_short - memory_before_short
+
+      memory_before_medium = :erlang.memory(:total)
       {:ok, j2} = Joiner.create(%{
         network_id: network.id,
         eui64: <<2::64>>,
         pskd: medium_pskd,
         timeout: 120
       })
-      
-      memory_medium = :erlang.memory(:total) - memory_before
-      
+      memory_after_medium = :erlang.memory(:total)
+      memory_medium = memory_after_medium - memory_before_medium
+
+      memory_before_long = :erlang.memory(:total)
       {:ok, j3} = Joiner.create(%{
         network_id: network.id,
         eui64: <<3::64>>,
         pskd: long_pskd,
         timeout: 120
       })
-      
-      memory_long = :erlang.memory(:total) - memory_before
-      
-      # Memory growth should be roughly linear with credential length
-      # (not revealing algorithmic complexity)
-      true
+      memory_after_long = :erlang.memory(:total)
+      memory_long = memory_after_long - memory_before_long
+
+      # Clean up
+      Joiner.destroy(j1)
+      Joiner.destroy(j2)
+      Joiner.destroy(j3)
+
+      # Validate linear growth: memory should scale roughly with credential length
+      # Short (6 bytes), Medium (16 bytes), Long (32 bytes)
+      # Expected ratios: 6:16:32 = 1:2.67:5.33
+
+      # Memory differences should exist (storing different lengths)
+      has_memory_variation = memory_short > 0 and memory_medium > 0 and memory_long > 0
+
+      # But differences should be reasonable (not exponential or revealing complexity)
+      # Allow up to 10x variation (very permissive for BEAM memory management)
+      max_memory = max(memory_short, max(memory_medium, memory_long))
+      min_memory = min(memory_short, min(memory_medium, memory_long))
+
+      reasonable_variation = min_memory > 0 and (max_memory / min_memory) < 10
+
+      has_memory_variation and reasonable_variation
     end
   end
 
@@ -166,10 +186,21 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # Error messages should be generic (not "not found" vs "unauthorized")
       case {result_exists, result_not_exists} do
         {{:ok, _}, {:error, msg}} ->
-          # Error message shouldn't reveal resource existence
+          # Normal case: existing succeeds, non-existing fails
+          # Error message shouldn't reveal "not found"
           not String.contains?(String.downcase(msg), "not found")
-        
-        _ -> true
+
+        {{:error, msg1}, {:error, msg2}} ->
+          # Both failed: error messages should be identical (no information leak)
+          msg1 == msg2
+
+        {{:ok, _}, {:ok, _}} ->
+          # Both succeeded: non-existing resource shouldn't succeed
+          false
+
+        {{:error, _}, {:ok, _}} ->
+          # Existing failed but non-existing succeeded: wrong behavior
+          false
       end
     end
   end
@@ -211,9 +242,15 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # Not all should succeed (rate limiting or detection)
       # OR system should remain functional despite attack
       devices = Device.by_network!(network.id)
-      
-      # Network should still be queryable
-      is_list(devices) and successful_creates <= sybil_count
+
+      # Network should still be queryable AND
+      # System should block at least some Sybil identities
+      # (successful_creates < sybil_count means rate limiting/detection worked)
+      # OR if all succeeded, at least network size is reasonable
+      is_list(devices) and (
+        successful_creates < sybil_count or
+        length(devices) < sybil_count * 0.9
+      )
     end
     |> measure("Sybil identities attempted", fn count -> count end)
   end
@@ -258,17 +295,38 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       
       # System should detect unusual topology
       all_devices = Device.by_network!(network.id)
-      
+
       # Check for anomalies (one device with many children)
       children_count = Enum.count(all_devices, fn d ->
         d.parent_id == target_device.extended_address
       end)
-      
-      # Detection: if one end_device has many children, suspicious
-      suspicious = target_device.device_type == :end_device and children_count > 0
-      
-      # If attack succeeded, at least it's detectable
-      true
+
+      # Fake neighbors were successfully created
+      fake_neighbor_ids = MapSet.new(Enum.map(fake_neighbors, & &1.id))
+      current_device_ids = MapSet.new(Enum.map(all_devices, & &1.id))
+      attack_created_devices = MapSet.subset?(fake_neighbor_ids, current_device_ids)
+
+      # Security validation: detect eclipse attack patterns
+      # 1. End devices should never have children (Thread spec violation)
+      end_device_with_children = target_device.device_type == :end_device and children_count > 0
+
+      # 2. Unusual number of children for a single device suggests attack
+      excessive_children = children_count > 10  # Threshold for suspicious activity
+
+      # 3. Attacker pattern: many devices with similar address prefix (0xFF)
+      suspicious_prefix_count = Enum.count(all_devices, fn d ->
+        case d.extended_address do
+          <<0xFF, _::56>> -> true
+          _ -> false
+        end
+      end)
+      suspicious_address_pattern = suspicious_prefix_count > 5
+
+      # Attack is detectable if any of these anomaly indicators are present
+      attack_detectable = end_device_with_children or excessive_children or suspicious_address_pattern
+
+      # Security property: if attack succeeded, it must be detectable
+      not attack_created_devices or attack_detectable
     end
   end
 
@@ -300,16 +358,34 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
         link_quality: 3,  # Perfect link quality claimed
         rssi: -30  # Strong signal (impossible for distance)
       })
-      
-      # System should validate topology consistency
-      # If allowed, at least it should be detectable
+
+      # Security property: system should either reject or detect wormhole attack
       case result do
-        {:ok, _device_b} ->
-          # Check if topology makes sense
-          true
-        
+        {:ok, device_b} ->
+          # Attack succeeded - verify it's at least detectable
+          all_devices = Device.by_network!(network.id)
+
+          # Check for topology inconsistency indicators:
+          # 1. Huge RLOC distance between parent and child (wormhole indicator)
+          rloc_distance = abs(device_a.rloc16 - device_b.rloc16)
+          suspicious_distance = rloc_distance > 0xFF00  # Parent: 0x0001, Child: 0xFFFF
+
+          # 2. Strong signal (-30 dBm) with very distant RLOC is physically impossible
+          strong_signal_distant = device_b.rssi > -40 and rloc_distance > 0xF000
+
+          # 3. Perfect link quality (3) with distant RLOC violates radio physics
+          perfect_lq_distant = device_b.link_quality == 3 and rloc_distance > 0xF000
+
+          # Wormhole attack must be detectable through at least one indicator
+          attack_detectable = suspicious_distance or strong_signal_distant or perfect_lq_distant
+
+          # Network should remain queryable even if attack succeeded
+          network_functional = is_list(all_devices) and length(all_devices) > 0
+
+          attack_detectable and network_functional
+
         {:error, _} ->
-          # Rejected due to validation
+          # Rejected due to validation - secure behavior
           true
       end
     end
@@ -357,7 +433,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # Simulate by creating inconsistent topology
       Enum.each(byzantine_routers, fn byz_router ->
         # Create fake children
-        Enum.each(1..5, fn j ->
+        Enum.each(1..5, fn _j ->
           Device.create(%{
             network_id: network.id,
             extended_address: :crypto.strong_rand_bytes(8),
@@ -369,10 +445,26 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
           })
         end)
       end)
-      
-      # Network should remain functional
+
+      # Network should remain functional despite byzantine routers
       all_devices = Device.by_network!(network.id)
-      is_list(all_devices) and length(all_devices) > 0
+
+      # Validate network integrity
+      network_queryable = is_list(all_devices) and length(all_devices) > 0
+
+      # Honest routers should still be present and queryable
+      honest_router_ids = MapSet.new(Enum.map(honest_routers, & &1.id))
+      current_devices = Device.by_network!(network.id)
+      current_device_ids = MapSet.new(Enum.map(current_devices, & &1.id))
+      honest_routers_intact = MapSet.subset?(honest_router_ids, current_device_ids)
+
+      # Byzantine routers should not outnumber honest ones (security property)
+      # System should maintain majority of honest nodes
+      total_routers = Enum.count(all_devices, &(&1.device_type == :router))
+      byzantine_ratio = byzantine_count / total_routers
+      byzantine_minority = byzantine_ratio <= 0.5
+
+      network_queryable and honest_routers_intact and byzantine_minority
     end
   end
 
@@ -506,31 +598,44 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       
       original_dataset = Network.operational_dataset(network)
       original_policy = original_dataset.security_policy
-      
-      # Attacker tries to downgrade security
-      weakened_policy = %{
-        rotation_time: 999999,  # Very long rotation (weak)
-        flags: %{
-          o: false,  # Disable out-of-band
-          n: false   # Disable native
-        }
-      }
-      
-      # Try to update with weakened security
-      result = try do
-        # Network.update would validate security policy
-        # This is a simulation - actual implementation would prevent this
-        :ok
+
+      # Attacker tries to downgrade security by extending rotation time
+      # (longer rotation = weaker security as compromised keys stay valid longer)
+      weakened_rotation = original_policy.rotation_time * 10
+
+      # Try to update with weakened security parameters
+      update_result = try do
+        # Attempt to update network with weakened security
+        # This should be rejected or limited by the implementation
+        Network.update(network, %{
+          # Try to set very long rotation (security downgrade)
+          security_policy: %{
+            rotation_time: weakened_rotation,
+            flags: original_policy.flags
+          }
+        })
       rescue
-        _ -> {:error, :downgrade_prevented}
+        _ -> {:error, :update_failed}
       end
-      
+
       # Verify security wasn't downgraded
       current_dataset = Network.operational_dataset(network)
       current_policy = current_dataset.security_policy
-      
-      # Rotation time should not have increased dramatically
-      current_policy.rotation_time <= original_policy.rotation_time * 2
+
+      # Security properties that must hold:
+      # 1. Rotation time should not have increased dramatically (max 2x is reasonable)
+      rotation_not_weakened = current_policy.rotation_time <= original_policy.rotation_time * 2
+
+      # 2. If update succeeded, rotation time should be bounded
+      update_bounded = case update_result do
+        {:ok, _} -> current_policy.rotation_time <= original_policy.rotation_time * 2
+        {:error, _} -> true  # Rejected = secure
+      end
+
+      # 3. Original security flags should be preserved
+      flags_preserved = current_policy.flags == original_policy.flags
+
+      rotation_not_weakened and update_bounded and flags_preserved
     end
   end
 

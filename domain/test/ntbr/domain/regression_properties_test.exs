@@ -23,11 +23,24 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
         network_name: "TestNet"
       })
       
-      # Empty names should fail
+      # Validate based on name length constraints
       case String.length(name) do
-        0 -> match?({:error, _}, result)
-        n when n > 0 and n <= 32 -> true  # Should succeed or have other validation
-        _ -> true  # May fail for other reasons
+        0 ->
+          # Empty names should fail
+          match?({:error, _}, result)
+
+        n when n > 0 and n <= 32 ->
+          # Valid length names should succeed
+          # This is the core regression test - valid lengths must work
+          match?({:ok, _}, result)
+
+        n when n > 32 ->
+          # Names too long should fail
+          match?({:error, _}, result)
+
+        _ ->
+          # Unexpected edge case
+          false
       end
     end
     |> aggregate(:name_length, fn name ->

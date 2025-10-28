@@ -28,16 +28,33 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       :ok = Client.set_pan_id(network.pan_id)
       :ok = Client.set_extended_pan_id(network.extended_pan_id)
       
-      # Apply transition sequence
-      {final_state, all_valid} = Enum.reduce(transition_sequence, {:detached, true}, fn transition, {state, valid} ->
-        case apply_transition(network.id, state, transition) do
-          {:ok, new_state} -> {new_state, valid}
-          {:error, _} -> {state, valid}  # Invalid transition, stay in current state
+      # Apply transition sequence and track transition validity
+      {final_state, all_transitions_valid} = Enum.reduce(
+        transition_sequence,
+        {:detached, true},
+        fn transition, {state, valid_so_far} ->
+          case apply_transition(network.id, state, transition) do
+            {:ok, new_state} ->
+              # Valid transition succeeded
+              {new_state, valid_so_far and true}
+
+            {:error, _reason} ->
+              # Invalid transition failed - this is expected for some sequences
+              # Mark as invalid and stay in current state
+              {state, false}
+          end
         end
-      end)
-      
-      # Final state should be valid
-      all_valid and final_state in [:detached, :child, :router, :leader]
+      )
+
+      # Verify final state is valid
+      # Note: all_transitions_valid being false means some transitions were invalid,
+      # which is acceptable (testing error handling). What matters is the final state.
+      final_state_valid = final_state in [:detached, :child, :router, :leader]
+
+      # Both are acceptable outcomes:
+      # 1. All transitions valid and final state valid, OR
+      # 2. Some transitions invalid (expected for property testing) but system didn't crash
+      final_state_valid
     end
     |> aggregate(:sequence_length, &length/1)
     |> classify(fn seq -> :leader in seq end, "reaches leader state")

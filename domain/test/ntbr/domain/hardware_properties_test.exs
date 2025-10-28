@@ -22,14 +22,18 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
       Process.sleep(boot_delay)
 
       # Should be operational after reasonable delay
-      try do
+      result = try do
         {:ok, version} = Client.get_property(:ncp_version)
         {:ok, caps} = Client.get_property(:caps)
-        
+
         is_binary(version) and is_list(caps)
       rescue
-        _ -> boot_delay < 30  # Expect failures only for very short delays
+        _ -> false
       end
+
+      # Accept result if successful, or if delay was extremely short (< 10ms)
+      # RCP spec requires readiness within reasonable time after reset
+      result or boot_delay < 10
     end
     |> collect(:boot_delay_range, fn delay ->
       cond do
@@ -104,17 +108,29 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
       # Configure with delays
       :ok = Client.set_channel(network.channel)
       Process.sleep(Enum.at(timing_delays, 0))
-      
+
       :ok = Client.set_network_key(network.network_key)
       Process.sleep(Enum.at(timing_delays, 1))
-      
+
       :ok = Client.interface_up()
       Process.sleep(Enum.at(timing_delays, 2))
-      
+
       :ok = Client.thread_start()
-      
-      # Should succeed regardless of timing
-      true
+
+      # Verify network formation succeeded despite timing variations
+      # Wait a bit for network to form
+      Process.sleep(100)
+
+      # Check that network is operational
+      formation_result = try do
+        {:ok, role} = Client.get_net_role()
+        # Should have a valid role (not disabled) after formation
+        role != :disabled
+      rescue
+        _ -> false
+      end
+
+      formation_result
     end
   end
 
