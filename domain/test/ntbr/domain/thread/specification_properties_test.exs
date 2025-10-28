@@ -113,17 +113,18 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
         rssi: -50
       })
       
-      # Attempt to create child - must fail
+      # Attempt to create child with end_device as parent - must fail per Thread spec
       result = Device.create(%{
         network_id: network.id,
         extended_address: :crypto.strong_rand_bytes(8),
         rloc16: :rand.uniform(0xFFFF),
         device_type: :end_device,
-        parent_id: end_device.extended_address,
+        parent_id: end_device.id,
         link_quality: 2,
         rssi: -60
       })
-      
+
+      # Should fail because end devices cannot have children per Thread spec
       match?({:error, _}, result)
     end
   end

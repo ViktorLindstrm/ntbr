@@ -118,14 +118,18 @@ jobs:
       - name: Detect which tests to run
         id: detect-tests
         if: github.event_name == 'pull_request'
+        working-directory: .
         run: |
-          cd ..  # Go to repo root since we're in domain/ by default
-
           # Make script executable
           chmod +x .github/scripts/detect-domain-tests.sh
 
+          # Use commit SHAs directly instead of branch names
+          # This works reliably in GitHub Actions PR context
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.sha }}"
+
           # Run detection script and capture output
-          output=$(.github/scripts/detect-domain-tests.sh origin/${{ github.base_ref }} HEAD)
+          output=$(.github/scripts/detect-domain-tests.sh "$BASE_SHA" "$HEAD_SHA")
           echo "$output"
 
           # Extract test pattern and description from script output
@@ -135,8 +139,6 @@ jobs:
           # Set outputs for later steps
           echo "pattern=$test_pattern" >> $GITHUB_OUTPUT
           echo "description=$test_description" >> $GITHUB_OUTPUT
-
-          cd domain  # Go back to domain directory
 
       - name: Set up Elixir
         uses: erlef/setup-beam@v1

@@ -146,14 +146,34 @@ defmodule NTBR.Domain.Resources.Device do
     defaults [:destroy]
 
     create :create do
-      accept [:network_id, :rloc16, :extended_address, :ipv6_addresses, 
+      accept [:network_id, :rloc16, :extended_address, :ipv6_addresses,
               :device_type, :mode, :link_quality, :rssi, :version, :parent_id]
-      
+
       validate fn changeset, _context ->
         extended_address = Ash.Changeset.get_attribute(changeset, :extended_address)
-        
+
         if extended_address && byte_size(extended_address) != 8 do
           {:error, "Extended address must be exactly 8 bytes"}
+        else
+          :ok
+        end
+      end
+
+      # Thread spec: Only routers and leaders can have children
+      validate fn changeset, _context ->
+        parent_id = Ash.Changeset.get_attribute(changeset, :parent_id)
+
+        if parent_id do
+          case Ash.get(__MODULE__, parent_id) do
+            {:ok, parent} ->
+              if parent.device_type in [:router, :leader] do
+                :ok
+              else
+                {:error, "Only routers and leaders can have children (Thread spec constraint)"}
+              end
+            _ ->
+              :ok
+          end
         else
           :ok
         end
