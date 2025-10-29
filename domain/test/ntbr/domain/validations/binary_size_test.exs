@@ -104,26 +104,35 @@ defmodule NTBR.Domain.Validations.BinarySizeTest do
 
   describe "validate/2 with non-binary values" do
     test "returns error for string value" do
+      # In Elixir, strings ARE binaries, so this tests size validation
+      # "not a binary" is 13 bytes, expected is 16 bytes
       changeset = make_changeset(%{network_key: "not a binary"})
       opts = [field: :network_key, size: 16]
 
-      assert {:error, [field: :network_key, message: "must be a binary"]} =
+      assert {:error, [field: :network_key, message: message]} =
                BinarySize.validate(changeset, opts)
+
+      assert message =~ "must be exactly 16 bytes"
+      assert message =~ "got 13 bytes"
     end
 
     test "returns error for integer value" do
+      # Ash type validation rejects integers for :binary attributes,
+      # so get_attribute returns nil, not the integer
       changeset = make_changeset(%{network_key: 12345})
       opts = [field: :network_key, size: 16]
 
-      assert {:error, [field: :network_key, message: "must be a binary"]} =
+      assert {:error, [field: :network_key, message: "is required"]} =
                BinarySize.validate(changeset, opts)
     end
 
     test "returns error for map value" do
+      # Ash type validation rejects maps for :binary attributes,
+      # so get_attribute returns nil, not the map
       changeset = make_changeset(%{network_key: %{foo: :bar}})
       opts = [field: :network_key, size: 16]
 
-      assert {:error, [field: :network_key, message: "must be a binary"]} =
+      assert {:error, [field: :network_key, message: "is required"]} =
                BinarySize.validate(changeset, opts)
     end
   end

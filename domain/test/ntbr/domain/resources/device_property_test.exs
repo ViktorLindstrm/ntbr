@@ -195,7 +195,8 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
 
   property "can update device attributes" do
     forall update_attrs <- update_device_attrs() do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, device} =
         Device.create(%{
@@ -396,7 +397,8 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
 
   property "by_extended_address finds device" do
     forall eui <- eui64_gen() do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, device} =
         Device.create(%{
@@ -413,7 +415,8 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
 
   property "by_rloc16 finds device" do
     forall rloc <- integer(0, 0xFFFF) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, device} =
         Device.create(%{

@@ -311,7 +311,9 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
 
   property "disable transition works from any state" do
     forall state_action <- oneof([:detached, :attach, :promote, :become_leader]) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      # Use unique network name to avoid ETS conflicts
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       # Transition to desired state
       network =
@@ -347,7 +349,9 @@ defmodule NTBR.Domain.Resources.NetworkPropertyTest do
 
   property "is_operational calculation correct for all states" do
     forall state_action <- oneof([:detached, :attach, :promote, :become_leader, :disable]) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      # Use unique network name to avoid ETS conflicts
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       # Transition to desired state
       network =

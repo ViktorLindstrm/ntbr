@@ -360,7 +360,8 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
 
   property "active filter returns only pending and joining joiners" do
     forall _ <- integer(1, 100) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       # Create joiners in different states
       {:ok, pending} =
@@ -409,7 +410,8 @@ defmodule NTBR.Domain.Resources.JoinerPropertyTest do
 
   property "by_eui64 finds specific joiner" do
     forall _ <- integer(1, 100) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       eui64 = :crypto.strong_rand_bytes(8)
 

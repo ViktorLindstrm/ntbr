@@ -57,13 +57,15 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
   end
 
   property "border router generates defaults if not provided" do
-    forall _ <- integer(1, 100) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+    forall iteration <- integer(1, 100) do
+      # Use unique network name to avoid ETS conflicts across iterations
+      network_name = "Test_#{iteration}_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, br} = BorderRouter.create(%{network_id: network.id})
 
-      # Check generated on_mesh_prefix is valid ULA /64
-      prefix_valid = br.on_mesh_prefix =~ ~r/^fd[0-9a-f]{10}::\/64$/i
+      # Check generated on_mesh_prefix is valid ULA /64 (format: fdXX:XXXX:XXXX:XXXX::/64)
+      prefix_valid = br.on_mesh_prefix =~ ~r/^fd[0-9a-f]{2}:[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{4}::\/64$/i
 
       # Check generated backbone_interface_id is 8 bytes
       iid_valid = is_binary(br.backbone_interface_id) and byte_size(br.backbone_interface_id) == 8
@@ -176,7 +178,9 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
 
   property "can update configuration settings" do
     forall new_settings <- update_settings_gen() do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      # Use unique network name
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, br} = BorderRouter.create(%{network_id: network.id})
 
@@ -187,7 +191,8 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
 
   property "can add external routes" do
     forall route_attrs <- external_route_gen() do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, br} = BorderRouter.create(%{network_id: network.id})
 
@@ -207,7 +212,8 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
 
   property "can remove external routes" do
     forall prefix <- ipv6_prefix_gen() do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, br} = BorderRouter.create(%{network_id: network.id})
 
@@ -223,7 +229,8 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
 
   property "can mark operational and not operational" do
     forall _ <- integer(1, 100) do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, br} = BorderRouter.create(%{network_id: network.id})
 
@@ -306,7 +313,8 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
 
   property "service_count calculation counts enabled services" do
     forall {mdns, srp, nat64} <- {boolean(), boolean(), boolean()} do
-      {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
+      network_name = "Test_#{:erlang.unique_integer([:positive])}"
+      {:ok, network} = Network.create(%{name: network_name, network_name: network_name, channel: 15})
 
       {:ok, br} =
         BorderRouter.create(%{
