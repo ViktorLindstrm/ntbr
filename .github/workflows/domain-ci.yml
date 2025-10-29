@@ -115,7 +115,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Need full history to compare changes
+          # For PRs, fetch the merge commit and both base and head refs
+          fetch-depth: 0
+          # Fetch all refs to ensure we have both base and head
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.ref }}
+
+      - name: Fetch base branch for PR comparison
+        if: github.event_name == 'pull_request'
+        run: |
+          # Ensure we have the base ref for comparison
+          git fetch origin ${{ github.event.pull_request.base.ref }}:refs/remotes/origin/${{ github.event.pull_request.base.ref }}
 
       - name: Detect which tests to run
         id: detect-tests
@@ -125,10 +134,23 @@ jobs:
           # Make script executable
           chmod +x .github/scripts/detect-domain-tests.sh
 
-          # Use commit SHAs directly instead of branch names
-          # This works reliably in GitHub Actions PR context
+          # Use the PR's head SHA and base SHA
+          # HEAD should be checked out, and we fetched the base ref above
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          echo "Comparing $BASE_SHA (base) to $HEAD_SHA (head)"
+
+          # Verify commits exist before running detection
+          if ! git cat-file -e "$BASE_SHA" 2>/dev/null; then
+            echo "Warning: Base SHA $BASE_SHA not found, using origin/${{ github.event.pull_request.base.ref }}"
+            BASE_SHA="origin/${{ github.event.pull_request.base.ref }}"
+          fi
+
+          if ! git cat-file -e "$HEAD_SHA" 2>/dev/null; then
+            echo "Warning: Head SHA $HEAD_SHA not found, using HEAD"
+            HEAD_SHA="HEAD"
+          fi
 
           # Run detection script and capture output
           output=$(.github/scripts/detect-domain-tests.sh "$BASE_SHA" "$HEAD_SHA")
@@ -269,9 +291,9 @@ jobs:
           path: |
             domain/deps
             domain/_build
-          key: ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('domain/mix.lock') }}
+          key: ${{ runner.os }}-domain-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-${{ hashFiles('domain/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
+            ${{ runner.os }}-domain-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       - name: Install dependencies
         run: mix deps.get
