@@ -62,8 +62,8 @@ defmodule NTBR.Domain.Resources.BorderRouterPropertyTest do
 
       {:ok, br} = BorderRouter.create(%{network_id: network.id})
 
-      # Check generated on_mesh_prefix is valid ULA /64
-      prefix_valid = br.on_mesh_prefix =~ ~r/^fd[0-9a-f]{10}::\/64$/i
+      # Check generated on_mesh_prefix is valid ULA /64 (format: fdXX:XXXX:XXXX:XXXX::/64)
+      prefix_valid = br.on_mesh_prefix =~ ~r/^fd[0-9a-f]{2}:[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{4}::\/64$/i
 
       # Check generated backbone_interface_id is 8 bytes
       iid_valid = is_binary(br.backbone_interface_id) and byte_size(br.backbone_interface_id) == 8
