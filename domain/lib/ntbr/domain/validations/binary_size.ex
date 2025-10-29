@@ -31,17 +31,8 @@ defmodule NTBR.Domain.Validations.BinarySize do
       validate {BinarySize, field: :eui64, size: 8, allow_nil?: true}
   """
   def validate(changeset, opts) do
-    # Validate required options
-    field = case Keyword.fetch(opts, :field) do
-      {:ok, f} -> f
-      :error -> raise ArgumentError, "BinarySize validation requires :field option"
-    end
-
-    size = case Keyword.fetch(opts, :size) do
-      {:ok, s} -> s
-      :error -> raise ArgumentError, "BinarySize validation requires :size option"
-    end
-
+    field = opts[:field] || raise ArgumentError, "BinarySize validation requires :field option"
+    size = opts[:size] || raise ArgumentError, "BinarySize validation requires :size option"
     allow_nil? = Keyword.get(opts, :allow_nil?, false)
 
     case Ash.Changeset.get_attribute(changeset, field) do

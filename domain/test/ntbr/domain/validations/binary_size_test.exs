@@ -117,18 +117,22 @@ defmodule NTBR.Domain.Validations.BinarySizeTest do
     end
 
     test "returns error for integer value" do
+      # Ash type validation rejects integers for :binary attributes,
+      # so get_attribute returns nil, not the integer
       changeset = make_changeset(%{network_key: 12345})
       opts = [field: :network_key, size: 16]
 
-      assert {:error, [field: :network_key, message: "must be a binary"]} =
+      assert {:error, [field: :network_key, message: "is required"]} =
                BinarySize.validate(changeset, opts)
     end
 
     test "returns error for map value" do
+      # Ash type validation rejects maps for :binary attributes,
+      # so get_attribute returns nil, not the map
       changeset = make_changeset(%{network_key: %{foo: :bar}})
       opts = [field: :network_key, size: 16]
 
-      assert {:error, [field: :network_key, message: "must be a binary"]} =
+      assert {:error, [field: :network_key, message: "is required"]} =
                BinarySize.validate(changeset, opts)
     end
   end
