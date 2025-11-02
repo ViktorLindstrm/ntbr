@@ -758,9 +758,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
   @spec rapid_state_change_gen() :: PropCheck.type()
   defp rapid_state_change_gen do
     let count <- integer(20, 100) do
-      Enum.map(1..count, fn _ ->
-        oneof([:attach, :detach, :promote])
-      end)
+      vector(count, oneof([:attach, :detach, :promote]))
     end
   end
 

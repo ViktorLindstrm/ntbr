@@ -350,13 +350,12 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
 
   @spec border_router_config_gen() :: PropCheck.type()
   defp border_router_config_gen do
-    let [
-      route_count <- integer(1, 10),
-      nat64_enabled <- boolean(),
-      num_priorities <- integer(1, 3)
-    ] do
-      priorities = List.duplicate(oneof([:high, :medium, :low]), num_priorities)
-      {route_count, nat64_enabled, priorities}
+    let route_count <- integer(1, 10) do
+      let nat64_enabled <- boolean() do
+        let priorities <- vector(integer(1, 3), oneof([:high, :medium, :low])) do
+          {route_count, nat64_enabled, priorities}
+        end
+      end
     end
   end
 
