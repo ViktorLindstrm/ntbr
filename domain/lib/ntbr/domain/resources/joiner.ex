@@ -497,7 +497,6 @@ defmodule NTBR.Domain.Resources.Joiner do
     define(:wildcards)
     define(:specific)
     define(:by_eui64, args: [:eui64])
-    define(:by_eui64!, args: [:eui64], get?: true)
     define(:expired_joiners)
     define(:link_device, args: [:device_id])
     define(:start)
