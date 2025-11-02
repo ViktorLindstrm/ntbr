@@ -107,7 +107,7 @@ defmodule NTBR.Domain.Resources.Network do
     attribute :state, :atom do
       allow_nil?(false)
       default(:detached)
-      constraints(one_of: [:any, :detached, :child, :router, :leader, :disabled])
+      constraints(one_of: [:detached, :child, :router, :leader, :disabled])
       public?(true)
     end
 
