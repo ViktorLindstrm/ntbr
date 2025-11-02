@@ -127,7 +127,7 @@ defmodule NTBR.Domain.Resources.Network do
     attribute :state, :atom do
       allow_nil?(false)
       default(:detached)
-      constraints(one_of: [:any, :detached, :child, :router, :leader, :disabled])
+      constraints(one_of: [:detached, :child, :router, :leader, :disabled])
       public?(true)
     end
 
@@ -147,7 +147,8 @@ defmodule NTBR.Domain.Resources.Network do
       # 
       # Thread 1.3 Specification Reference: Section 8.10.1.15 - Security Policy TLV
       default(%{
-        rotation_time: 672,
+        # Hours (Thread spec: max 1 week = 168 hours)
+        rotation_time: 168,
         flags: %{
           obtain_network_key: true,
           native_commissioning: true,
@@ -247,7 +248,7 @@ defmodule NTBR.Domain.Resources.Network do
       transition(:become_leader, from: [:router, :child], to: :leader)
       transition(:demote, from: [:router, :leader], to: :child)
       transition(:detach, from: [:child, :router, :leader], to: :detached)
-      transition(:disable, from: :any, to: :disabled)
+      transition(:disable, from: [:detached, :child, :router, :leader, :disabled], to: :disabled)
     end
   end
 
@@ -294,6 +295,34 @@ defmodule NTBR.Domain.Resources.Network do
             :ok
         end
       end)
+
+      # Thread spec: Security policy rotation_time must be positive and max 1 week (168 hours)
+      validate(fn changeset, _context ->
+        security_policy = Ash.Changeset.get_attribute(changeset, :security_policy)
+
+        if security_policy && is_map(security_policy) do
+          rotation_time = Map.get(security_policy, :rotation_time)
+
+          cond do
+            is_nil(rotation_time) ->
+              :ok
+
+            not is_integer(rotation_time) ->
+              {:error, "Security policy rotation_time must be an integer"}
+
+            rotation_time <= 0 ->
+              {:error, "Security policy rotation_time must be positive"}
+
+            rotation_time > 168 ->
+              {:error, "Security policy rotation_time must not exceed 168 hours (1 week) per Thread spec"}
+
+            true ->
+              :ok
+          end
+        else
+          :ok
+        end
+      end)
     end
 
     read :read do
@@ -316,6 +345,34 @@ defmodule NTBR.Domain.Resources.Network do
 
     update :update do
       accept([:name, :network_name, :channel, :security_policy])
+
+      # Thread spec: Security policy rotation_time must be positive and max 1 week (168 hours)
+      validate(fn changeset, _context ->
+        security_policy = Ash.Changeset.get_attribute(changeset, :security_policy)
+
+        if security_policy && is_map(security_policy) do
+          rotation_time = Map.get(security_policy, :rotation_time)
+
+          cond do
+            is_nil(rotation_time) ->
+              :ok
+
+            not is_integer(rotation_time) ->
+              {:error, "Security policy rotation_time must be an integer"}
+
+            rotation_time <= 0 ->
+              {:error, "Security policy rotation_time must be positive"}
+
+            rotation_time > 168 ->
+              {:error, "Security policy rotation_time must not exceed 168 hours (1 week) per Thread spec"}
+
+            true ->
+              :ok
+          end
+        else
+          :ok
+        end
+      end)
     end
 
     update :update_credentials do
@@ -374,6 +431,7 @@ defmodule NTBR.Domain.Resources.Network do
   code_interface do
     define(:create)
     define(:read)
+    define(:list, action: :read)
     define(:by_name, args: [:name])
     define(:operational)
     define(:leaders)
@@ -388,12 +446,33 @@ defmodule NTBR.Domain.Resources.Network do
     define(:disable)
     define(:by_id, action: :read, get_by: [:id])
     # define :by_id!, action: :read, get_by: [:id], not_found_error?: true
+  end
 
-    define_calculation(:operational_dataset)
+  @doc """
+  Returns the operational dataset for a network.
+  Automatically loads the calculation if not already loaded.
+  """
+  def operational_dataset(network) when is_struct(network, __MODULE__) do
+    network
+    |> Ash.load!(:operational_dataset)
+    |> Map.get(:operational_dataset)
+  end
+
+  def operational_dataset(network_id) when is_binary(network_id) do
+    {:ok, network} = read(network_id, load: [:operational_dataset])
+    Map.get(network, :operational_dataset)
+  end
+
+  @doc """
+  Returns the operational dataset for a network, raising on error.
+  """
+  def operational_dataset!(network_or_id) do
+    operational_dataset(network_or_id)
   end
 
   # Private helper functions
 
+  @spec generate_network_key_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_network_key_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :network_key) do
       changeset
@@ -402,6 +481,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_pan_id_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_pan_id_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :pan_id) do
       changeset
@@ -412,6 +492,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_extended_pan_id_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_extended_pan_id_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :extended_pan_id) do
       changeset
@@ -420,6 +501,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_mesh_local_prefix_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_mesh_local_prefix_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :mesh_local_prefix) do
       changeset
@@ -429,6 +511,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_mesh_local_prefix() :: String.t()
   defp generate_mesh_local_prefix do
     # Generate Thread mesh-local prefix per RFC 4193
     # Format: fdXX:XXXX:XXXX:XXXX::/64

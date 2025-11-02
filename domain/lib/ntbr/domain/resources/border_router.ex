@@ -109,6 +109,17 @@ defmodule NTBR.Domain.Resources.BorderRouter do
       argument :next_hop_is_this_device, :boolean, default: true
       require_atomic? false
 
+      # Thread spec: Route preference must be one of :high, :medium, :low
+      validate fn changeset, context ->
+        preference = context.arguments.preference
+
+        if preference in [:high, :medium, :low] do
+          :ok
+        else
+          {:error, "Route preference must be one of: :high, :medium, :low (Thread spec)"}
+        end
+      end
+
       change fn changeset, context ->
         route = %{
           prefix: context.arguments.prefix,
@@ -229,6 +240,8 @@ defmodule NTBR.Domain.Resources.BorderRouter do
   end
 
   # Private helper functions
+
+  @spec maybe_generate_on_mesh_prefix(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp maybe_generate_on_mesh_prefix(changeset) do
     case Ash.Changeset.get_attribute(changeset, :on_mesh_prefix) do
       nil ->
@@ -247,6 +260,7 @@ defmodule NTBR.Domain.Resources.BorderRouter do
     end
   end
 
+  @spec maybe_generate_backbone_interface_id(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp maybe_generate_backbone_interface_id(changeset) do
     case Ash.Changeset.get_attribute(changeset, :backbone_interface_id) do
       nil ->
