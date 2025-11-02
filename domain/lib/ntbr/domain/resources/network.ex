@@ -313,6 +313,7 @@ defmodule NTBR.Domain.Resources.Network do
 
     update :update do
       accept([:name, :network_name, :channel, :security_policy])
+      require_atomic?(false)
 
       # Thread spec: Security policy rotation_time must be positive and max 1 week (168 hours)
       validate(fn changeset, _context ->

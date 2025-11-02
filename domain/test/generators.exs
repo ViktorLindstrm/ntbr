@@ -1,6 +1,9 @@
 defmodule NTBR.TestSupport.Generators do
   @moduledoc false
   # Shared property-based test generators for NTBR tests.
+  #
+  # Note: For Ash resource generators, see NTBR.Domain.Test.AshGenerators
+  # which provides type-safe generators respecting Ash constraints.
 
   import PropCheck
 

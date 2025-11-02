@@ -12,8 +12,9 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
   use ExUnit.Case, async: false
   use PropCheck
 
-  alias NTBR.Domain.Resources.{Network, Device, Joiner, BorderRouter}
-  alias NTBR.Domain.Spinel.{Frame, Client}
+  alias NTBR.Domain.Resources.{Network, Device, Joiner}
+  alias NTBR.Domain.Spinel.Frame
+  alias NTBR.Domain.Test.AshGenerators
 
   @moduletag :property
   @moduletag :integration
@@ -27,7 +28,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
 
   property "constant-time comparison prevents timing attacks on credentials",
            [:verbose, {:numtests, 200}] do
-    forall {correct_cred, similar_creds, different_creds} <- credential_timing_gen() do
+    forall {correct_cred, similar_creds, different_creds} <- AshGenerators.credential_timing_gen() do
       {:ok, network} = Network.create(%{
         name: "ConstTime-#{:rand.uniform(10000)}",
         network_name: "ConstTimeNet"
@@ -162,7 +163,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
 
   property "error messages don't leak existence of resources",
            [:verbose, {:numtests, 200}] do
-    forall {existing_id, non_existing_id} <- resource_enumeration_gen() do
+    forall {existing_id, non_existing_id} <- AshGenerators.resource_enumeration_gen() do
       # Create a network
       {:ok, network} = Network.create(%{
         name: "ErrorLeak-#{existing_id}",
@@ -247,17 +248,18 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # System should block at least some Sybil identities
       # (successful_creates < sybil_count means rate limiting/detection worked)
       # OR if all succeeded, at least network size is reasonable
-      is_list(devices) and (
+      result = is_list(devices) and (
         successful_creates < sybil_count or
         length(devices) < sybil_count * 0.9
       )
+      
+      measure("Sybil identities attempted", sybil_count, result)
     end
-    |> measure("Sybil identities attempted", fn count -> count end)
   end
 
   property "eclipse attack: isolated devices detect partitioning",
            [:verbose, {:numtests, 50}] do
-    forall partition_scenario <- network_partition_gen() do
+    forall partition_scenario <- AshGenerators.network_partition_gen() do
       {:ok, network} = Network.create(%{
         name: "Eclipse-#{:rand.uniform(10000)}",
         network_name: "EclipseNet"
@@ -286,7 +288,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
           extended_address: <<0xFF, i::56>>,
           rloc16: 0xF000 + i,
           device_type: :router,
-          parent_id: target_device.extended_address,
+          parent_id: target_device.id,  # Use device ID, not extended_address
           link_quality: 3,
           rssi: -40  # Strong signal (attacker is close)
         })
@@ -298,7 +300,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
 
       # Check for anomalies (one device with many children)
       children_count = Enum.count(all_devices, fn d ->
-        d.parent_id == target_device.extended_address
+        d.parent_id == target_device.id  # Use device ID, not extended_address
       end)
 
       # Fake neighbors were successfully created
@@ -470,7 +472,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
 
   property "conflicting state reports from multiple sources are resolved",
            [:verbose, {:numtests, 100}] do
-    forall conflict_scenario <- state_conflict_gen() do
+    forall conflict_scenario <- AshGenerators.state_conflict_gen() do
       {:ok, network} = Network.create(%{
         name: "Conflict-#{:rand.uniform(10000)}",
         network_name: "ConflictNet"
@@ -480,7 +482,8 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       tasks = Enum.map(conflict_scenario.conflicting_states, fn claimed_state ->
         Task.async(fn ->
           try do
-            net = Network.read!(network.id)
+            # Use Ash.get! to properly read the resource by ID
+            net = Ash.get!(Network, network.id)
             # Different processes claim different states
             case claimed_state do
               :child -> Network.attach(net)
@@ -493,11 +496,11 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
         end)
       end)
       
-      results = Enum.map(tasks, &Task.await(&1, 5000))
+      _results = Enum.map(tasks, &Task.await(&1, 5000))
       
       # System should converge to consistent state
       Process.sleep(100)
-      final_network = Network.read!(network.id)
+      final_network = Ash.get!(Network, network.id)
       
       # Final state must be valid
       final_network.state in [:detached, :child, :router, :leader]
@@ -659,14 +662,17 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       amplification_factor = byte_size(encoded_response) / byte_size(encoded_request)
       
       # Amplification factor should be < 2 (no amplification attack)
-      amplification_factor < 2.0
+      result = amplification_factor < 2.0
+      
+      # Correct measure usage: pass the value, not a function
+      result
+      |> measure("Request size", request_size)
     end
-    |> measure("Request size", fn size -> size end)
   end
 
   property "message ordering attacks: out-of-order frames don't corrupt state",
            [:verbose, {:numtests, 100}] do
-    forall frame_sequence <- frame_sequence_gen(20, 50) do
+    forall frame_sequence <- AshGenerators.frame_sequence_gen(20, 50) do
       # Attacker reorders frames
       shuffled_sequence = Enum.shuffle(frame_sequence)
       
@@ -696,7 +702,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
 
   property "resource exhaustion via malformed requests is prevented",
            [:verbose, {:numtests, 100}] do
-    forall malformed_flood <- malformed_flood_gen() do
+    forall malformed_flood <- AshGenerators.malformed_flood_gen() do
       memory_before = :erlang.memory(:total)
       
       # Flood system with malformed requests
@@ -721,74 +727,8 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
   end
 
   # ===========================================================================
-  # Generators
+  # Generators - Now using AshGenerators module
   # ===========================================================================
-
-  defp credential_timing_gen do
-    correct = "CORRECT12345"
-    
-    # Similar (1-2 chars different)
-    similar = [
-      "XORRECT12345",
-      "CORRECT12346",
-      "CORREC112345",
-      "CORRECT12345X"
-    ]
-    
-    # Very different
-    different = [
-      "ZZZZZZZZZZZZZ",
-      "WRONG1234567",
-      "COMPLETELY89"
-    ]
-    
-    {correct, similar, different}
-  end
-
-  defp resource_enumeration_gen do
-    existing_id = :crypto.strong_rand_bytes(16)
-    non_existing_id = :crypto.strong_rand_bytes(16)
-    {existing_id, non_existing_id}
-  end
-
-  defp network_partition_gen do
-    let {fake_count, isolation_type} <- {integer(5, 20), oneof([:full, :partial])} do
-      %{
-        fake_count: fake_count,
-        isolation_type: isolation_type
-      }
-    end
-  end
-
-  defp state_conflict_gen do
-    let count <- integer(3, 10) do
-      let conflicting_states <- vector(count, oneof([:child, :router, :detached])) do
-        %{
-          conflicting_states: conflicting_states
-        }
-      end
-    end
-  end
-
-  defp frame_sequence_gen(min, max) do
-    let count <- integer(min, max) do
-      Enum.map(1..count, fn i ->
-        frame = Frame.new(:prop_value_get, <<i::8>>, tid: rem(i, 16))
-        Frame.encode(frame)
-      end)
-    end
-  end
-
-  defp malformed_flood_gen do
-    let count <- integer(100, 500) do
-      Enum.map(1..count, fn _ ->
-        oneof([
-          :crypto.strong_rand_bytes(Enum.random(0..100)),
-          <<0xFF, 0xFF>>,
-          <<0x00>>,
-          <<>>
-        ])
-      end)
-    end
-  end
+  # All generators have been moved to NTBR.Domain.Test.AshGenerators
+  # This ensures proper type safety and Ash constraint compliance
 end
