@@ -121,7 +121,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       end)
       
       # System should still be operational
-      {:ok, _test_network} = Network.read(network.id)
+      {:ok, _test_network} = Network.by_id(network.id)
       
       result = all_failed
       attacker_count = length(concurrent_attackers)
@@ -232,7 +232,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # Verify name is stored safely
-          retrieved = Network.read!(network.id)
+          retrieved = Network.by_id!(network.id)
           is_binary(retrieved.name)
         
         {:error, _} ->
@@ -330,15 +330,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
           try do
             case transition do
               :attach -> 
-                net = Network.read!(network.id)
+                net = Network.by_id!(network.id)
                 Network.attach(net)
               
               :detach ->
-                net = Network.read!(network.id)
+                net = Network.by_id!(network.id)
                 Network.detach(net)
               
               :promote ->
-                net = Network.read!(network.id)
+                net = Network.by_id!(network.id)
                 Network.promote(net)
             end
           rescue
@@ -350,7 +350,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       results = Enum.map(tasks, &Task.await(&1, 5000))
       
       # System should maintain consistency
-      final_network = Network.read!(network.id)
+      final_network = Network.by_id!(network.id)
       valid_final_state = final_network.state in [:detached, :child, :router, :leader]
       
       # No crashes
@@ -551,7 +551,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
           # For now, check it didn't just blindly accept
           updated.device_type == :end_device or
           # If it changed, verify network state allows it
-          Network.read!(network.id).state == :leader
+          Network.by_id!(network.id).state == :leader
         
         {:error, _} ->
           true
@@ -653,7 +653,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # If accepted, should be safely stored
-          retrieved = Network.read!(network.id)
+          retrieved = Network.by_id!(network.id)
           String.valid?(retrieved.name)
         
         {:error, _} ->
