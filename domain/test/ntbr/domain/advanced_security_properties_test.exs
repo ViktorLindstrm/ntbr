@@ -12,8 +12,8 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
   use ExUnit.Case, async: false
   use PropCheck
 
-  alias NTBR.Domain.Resources.{Network, Device, Joiner, BorderRouter}
-  alias NTBR.Domain.Spinel.{Frame, Client}
+  alias NTBR.Domain.Resources.{Network, Device, Joiner}
+  alias NTBR.Domain.Spinel.Frame
   alias NTBR.Domain.Test.AshGenerators
 
   @moduletag :property
@@ -495,7 +495,7 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
         end)
       end)
       
-      results = Enum.map(tasks, &Task.await(&1, 5000))
+      _results = Enum.map(tasks, &Task.await(&1, 5000))
       
       # System should converge to consistent state
       Process.sleep(100)
