@@ -172,7 +172,7 @@ defmodule NTBR.Domain.Spinel.PropertyTest do
       assert Property.to_id(:ncp_version) == 0x02
       assert Property.to_id(:phy_chan) == 0x71
       assert Property.to_id(:mac_15_4_panid) == 0x84
-      assert Property.to_id(:thread_role) == 0xA3
+      assert Property.to_id(:net_role) == 0xA3
       assert Property.to_id(:ipv6_ll_addr) == 0xE0
     end
 

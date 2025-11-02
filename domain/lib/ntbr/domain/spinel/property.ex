@@ -304,7 +304,7 @@ defmodule NTBR.Domain.Spinel.Property do
       iex> Property.category(:phy_chan)
       :phy
 
-      iex> Property.category(:thread_role)
+      iex> Property.category(:net_role)
       :net
   """
   @spec category(property()) :: category()
@@ -374,15 +374,20 @@ defmodule NTBR.Domain.Spinel.Property do
   end
 
   def category(id) when is_integer(id) and id in 0..255 do
-    cond do
-      id in 0x00..0x0F -> :core
-      id in 0x70..0x7F -> :phy
-      id in 0x80..0x9F -> :mac
-      id in 0xA0..0xBF -> :net
-      id in 0xC0..0xDF -> :thread
-      id in 0xE0..0xEF -> :ipv6
-      id in 0xF0..0xFF -> :stream
-      true -> :unknown
+    # Check if the ID is actually defined
+    if Map.has_key?(@properties, id) do
+      cond do
+        id in 0x00..0x0F -> :core
+        id in 0x70..0x7F -> :phy
+        id in 0x80..0x9F -> :mac
+        id in 0xA0..0xBF -> :net
+        id in 0xC0..0xDF -> :thread
+        id in 0xE0..0xEF -> :ipv6
+        id in 0xF0..0xFF -> :stream
+        true -> :unknown
+      end
+    else
+      :unknown
     end
   end
 
