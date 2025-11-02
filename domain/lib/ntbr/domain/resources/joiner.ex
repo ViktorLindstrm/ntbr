@@ -504,7 +504,6 @@ defmodule NTBR.Domain.Resources.Joiner do
     define(:fail)
     define(:expire)
     define(:by_id, action: :read, get_by: [:id])
-    define(:by_id!, action: :read, get_by: [:id], get?: true)
   end
 
   @doc """
