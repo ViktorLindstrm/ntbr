@@ -248,12 +248,13 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # System should block at least some Sybil identities
       # (successful_creates < sybil_count means rate limiting/detection worked)
       # OR if all succeeded, at least network size is reasonable
-      is_list(devices) and (
+      result = is_list(devices) and (
         successful_creates < sybil_count or
         length(devices) < sybil_count * 0.9
       )
+      
+      measure("Sybil identities attempted", sybil_count, result)
     end
-    |> measure("Sybil identities attempted", sybil_count)
   end
 
   property "eclipse attack: isolated devices detect partitioning",
