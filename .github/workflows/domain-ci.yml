@@ -46,6 +46,14 @@ jobs:
           install-rebar: true
           install-hex: true
 
+      - name: Verify Elixir installation
+        run: |
+          echo "Elixir version:"
+          elixir --version
+          echo ""
+          echo "Mix version:"
+          mix --version
+
       - name: Restore dependencies cache
         uses: actions/cache@v4
         with:
@@ -57,7 +65,12 @@ jobs:
             ${{ runner.os }}-domain-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
 
       - name: Install dependencies
-        run: mix deps.get
+        run: |
+          # Ensure hex and rebar are installed
+          mix local.hex --force --if-missing
+          mix local.rebar --force --if-missing
+          # Get dependencies
+          mix deps.get
 
       - name: Compile dependencies
         run: mix deps.compile
@@ -172,6 +185,17 @@ jobs:
           install-rebar: true
           install-hex: true
 
+      - name: Verify Elixir installation
+        run: |
+          echo "Elixir version:"
+          elixir --version
+          echo ""
+          echo "Mix version:"
+          mix --version
+          echo ""
+          echo "Hex version:"
+          mix hex.info || echo "Hex not installed, will install..."
+
       - name: Restore dependencies cache
         uses: actions/cache@v4
         with:
@@ -183,10 +207,18 @@ jobs:
             ${{ runner.os }}-domain-mix-${{ matrix.otp }}-${{ matrix.elixir }}-
 
       - name: Install dependencies
-        run: mix deps.get
+        run: |
+          # Ensure hex is installed and up to date
+          mix local.hex --force --if-missing
+          mix local.rebar --force --if-missing
+          # Get dependencies
+          mix deps.get
 
-      - name: Compile
-        run: mix compile
+      - name: Compile dependencies first
+        run: mix deps.compile
+
+      - name: Compile project
+        run: mix compile --warnings-as-errors
 
       - name: Run property-based tests
         run: |
@@ -284,6 +316,8 @@ jobs:
         with:
           elixir-version: ${{ env.ELIXIR_VERSION }}
           otp-version: ${{ env.OTP_VERSION }}
+          install-rebar: true
+          install-hex: true
 
       - name: Restore dependencies cache
         uses: actions/cache@v4
@@ -296,7 +330,12 @@ jobs:
             ${{ runner.os }}-domain-mix-${{ env.OTP_VERSION }}-${{ env.ELIXIR_VERSION }}-
 
       - name: Install dependencies
-        run: mix deps.get
+        run: |
+          # Ensure hex and rebar are installed
+          mix local.hex --force --if-missing
+          mix local.rebar --force --if-missing
+          # Get dependencies
+          mix deps.get
 
       - name: Run tests with coverage
         run: |
