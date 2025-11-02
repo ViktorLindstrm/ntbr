@@ -220,7 +220,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     oneof([
       # Valid PSKDs
       let len <- integer(6, 32) do
-        chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+        chars = ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         for _ <- 1..len, into: "", do: <<Enum.random(chars)>>
       end,
       

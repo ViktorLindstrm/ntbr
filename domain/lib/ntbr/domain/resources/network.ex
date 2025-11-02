@@ -216,7 +216,7 @@ defmodule NTBR.Domain.Resources.Network do
       transition(:become_leader, from: [:router, :child], to: :leader)
       transition(:demote, from: [:router, :leader], to: :child)
       transition(:detach, from: [:child, :router, :leader], to: :detached)
-      transition(:disable, from: :any, to: :disabled)
+      transition(:disable, from: [:detached, :child, :router, :leader, :disabled], to: :disabled)
     end
   end
 
