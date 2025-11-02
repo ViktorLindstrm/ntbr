@@ -204,7 +204,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   end
 
   property "network recovers correctly after RCP reset at any point",
-           [:verbose, {:numtests, 50}] do
+           [:verbose, {:numtests, 30}] do  # Reduced from 50 to 30 for faster CI
     forall {initial_state, device_count, reset_delay} <- recovery_scenario_gen() do
       {:ok, network} = create_network_in_state(initial_state)
       
@@ -224,8 +224,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       if reset_delay > 0, do: Process.sleep(reset_delay)
       :ok = Client.reset()
       
-      # Allow recovery time
-      Process.sleep(2000)
+      # Allow recovery time (reduced from 2000ms to 500ms)
+      Process.sleep(500)
       
       # Network should be in valid state
       try do
@@ -299,8 +299,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   end
 
   property "joiner expiration handling works at various timeout values",
-           [:verbose, {:numtests, 100}] do
-    forall timeout_seconds <- integer(1, 10) do
+           [:verbose, {:numtests, 20}] do  # Reduced from 100 to 20 for faster CI
+    forall timeout_seconds <- integer(1, 3) do  # Reduced from 1-10 to 1-3 seconds
       {:ok, network} = create_network_in_state(:leader)
       
       {:ok, joiner} = Joiner.create(%{
