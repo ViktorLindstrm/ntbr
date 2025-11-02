@@ -318,16 +318,19 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
 
   # Generators
 
+  @spec network_transition_sequence_gen(integer(), integer()) :: PropCheck.type()
   defp network_transition_sequence_gen(min, max) do
     let count <- integer(min, max) do
       vector(count, transition_gen())
     end
   end
 
+  @spec transition_gen() :: PropCheck.type()
   defp transition_gen do
     oneof([:attach, :promote, :demote, :detach])
   end
 
+  @spec commissioning_scenario_gen() :: PropCheck.type()
   defp commissioning_scenario_gen do
     {
       oneof([:child, :router, :leader]),
@@ -336,6 +339,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     }
   end
 
+  @spec border_router_config_gen() :: PropCheck.type()
   defp border_router_config_gen do
     {
       integer(1, 10),  # route count
@@ -344,6 +348,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     }
   end
 
+  @spec recovery_scenario_gen() :: PropCheck.type()
   defp recovery_scenario_gen do
     {
       oneof([:child, :router, :leader]),  # initial state
@@ -352,6 +357,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     }
   end
 
+  @spec stale_device_scenario_gen() :: PropCheck.type()
   defp stale_device_scenario_gen do
     let total <- integer(10, 50) do
       stale = integer(1, div(total, 2))
@@ -362,6 +368,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
 
   # Helpers
 
+  @spec create_network_in_state(atom()) :: {:ok, term()} | {:error, term()}
   defp create_network_in_state(desired_state) do
     {:ok, network} = Network.create(%{
       name: "State-#{:rand.uniform(10000)}",
@@ -391,6 +398,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     end
   end
 
+  @spec apply_transition(String.t(), atom(), atom()) :: {:ok, term()} | {:error, term()}
   defp apply_transition(network_id, current_state, transition) do
     network = Network.read!(network_id)
     
@@ -405,6 +413,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     end
   end
 
+  @spec generate_valid_pskd() :: String.t()
   defp generate_valid_pskd do
     chars = ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     length = Enum.random(6..32)

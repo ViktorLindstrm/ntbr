@@ -209,6 +209,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
 
   # Generators
 
+  @spec string_gen(integer(), integer()) :: PropCheck.type()
   defp string_gen(min, max) do
     let len <- integer(min, max) do
       :crypto.strong_rand_bytes(len)
@@ -217,6 +218,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     end
   end
 
+  @spec pskd_candidate_gen() :: PropCheck.type()
   defp pskd_candidate_gen do
     oneof([
       # Valid PSKDs
@@ -238,6 +240,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     ])
   end
 
+  @spec invalid_network_attrs_gen() :: PropCheck.type()
   defp invalid_network_attrs_gen do
     oneof([
       %{name: "", network_name: "Test", channel: 15},
@@ -249,6 +252,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     ])
   end
 
+  @spec device_operation_sequence_gen() :: PropCheck.type()
   defp device_operation_sequence_gen do
     let count <- integer(10, 50) do
       Enum.map(1..count, fn _ ->
@@ -261,6 +265,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     end
   end
 
+  @spec apply_device_operation(String.t(), {:create, :root | :child} | {:update_parent}) :: {:ok, term()} | {:error, term()}
   defp apply_device_operation(network_id, {:create, :root}) do
     Device.create(%{
       network_id: network_id,
@@ -297,6 +302,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     {:ok, :skipped}
   end
 
+  @spec has_topology_cycles?(list()) :: boolean()
   defp has_topology_cycles?(devices) do
     device_map = Map.new(devices, fn d -> {d.extended_address, d} end)
     
@@ -305,6 +311,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
     end)
   end
 
+  @spec check_cycle(term(), map(), MapSet.t()) :: boolean()
   defp check_cycle(device, device_map, visited) do
     if MapSet.member?(visited, device.extended_address) do
       true  # Cycle detected
