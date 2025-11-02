@@ -11,7 +11,6 @@ defmodule NTBR.Domain.Test.AshGenerators do
   use PropCheck
   import PropCheck
   import Bitwise
-  import PropCheck.BasicTypes
 
   @type uuid :: String.t()
 
@@ -66,7 +65,12 @@ defmodule NTBR.Domain.Test.AshGenerators do
   """
   def network_name_gen do
     let length <- integer(1, 16) do
-      let chars <- vector(length, oneof([char(?a..?z), char(?A..?Z), char(?0..?9), exactly(?-)])) do
+      let chars <- vector(length, oneof([
+        integer(?a, ?z),  # lowercase letters
+        integer(?A, ?Z),  # uppercase letters
+        integer(?0, ?9),  # digits
+        exactly(?-)       # hyphen
+      ])) do
         to_string(chars)
       end
     end
@@ -182,7 +186,10 @@ defmodule NTBR.Domain.Test.AshGenerators do
   """
   def pskd_gen do
     let length <- integer(6, 32) do
-      let chars <- vector(length, oneof([char(?0..?9), char(?A..?Z)])) do
+      let chars <- vector(length, oneof([
+        integer(?0, ?9),  # digits
+        integer(?A, ?Z)   # uppercase letters
+      ])) do
         to_string(chars)
       end
     end
