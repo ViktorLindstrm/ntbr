@@ -299,8 +299,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   end
 
   property "joiner expiration handling works at various timeout values",
-           [:verbose, {:numtests, 20}] do  # Reduced from 100 to 20 for faster CI
-    forall timeout_seconds <- integer(1, 3) do  # Reduced from 1-10 to 1-3 seconds
+           [:verbose, {:numtests, 50}] do  # Reduced from 100, but kept reasonable for property testing
+    forall timeout_seconds <- integer(1, 3) do  # Reduced max from 10s to 3s to keep total time reasonable
       {:ok, network} = create_network_in_state(:leader)
       
       {:ok, joiner} = Joiner.create(%{
