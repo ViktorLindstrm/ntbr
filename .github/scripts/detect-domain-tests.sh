@@ -81,10 +81,10 @@ done <<< "$CHANGED_FILES"
 
 # Count how many components changed
 components_count=0
-[ "$resources_changed" = true ] && ((components_count++))
-[ "$spinel_changed" = true ] && ((components_count++))
-[ "$thread_changed" = true ] && ((components_count++))
-[ "$validations_changed" = true ] && ((components_count++))
+[ "$resources_changed" = true ] && ((components_count++)) || true
+[ "$spinel_changed" = true ] && ((components_count++)) || true
+[ "$thread_changed" = true ] && ((components_count++)) || true
+[ "$validations_changed" = true ] && ((components_count++)) || true
 
 echo "Components changed:"
 echo "  Resources: $resources_changed"
@@ -110,10 +110,10 @@ elif [ $components_count -eq 1 ]; then
   if [ "$resources_changed" = true ]; then
     # Check if only one specific resource changed
     specific_resource_count=0
-    [ "$network_changed" = true ] && ((specific_resource_count++))
-    [ "$device_changed" = true ] && ((specific_resource_count++))
-    [ "$border_router_changed" = true ] && ((specific_resource_count++))
-    [ "$joiner_changed" = true ] && ((specific_resource_count++))
+    [ "$network_changed" = true ] && ((specific_resource_count++)) || true
+    [ "$device_changed" = true ] && ((specific_resource_count++)) || true
+    [ "$border_router_changed" = true ] && ((specific_resource_count++)) || true
+    [ "$joiner_changed" = true ] && ((specific_resource_count++)) || true
 
     if [ $specific_resource_count -eq 1 ]; then
       # Run tests for specific resource + integration tests
