@@ -701,10 +701,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
   end
 
   defp replay_attack_gen do
-    %{
-      replay_count: integer(5, 20),
-      delay_between: integer(0, 100)
-    }
+    let [
+      replay_count <- integer(5, 20),
+      delay_between <- integer(0, 100)
+    ] do
+      %{
+        replay_count: replay_count,
+        delay_between: delay_between
+      }
+    end
   end
 
   defp sql_injection_gen do
@@ -753,10 +758,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
   end
 
   defp resource_exhaustion_gen do
-    %{
-      target: oneof([:memory, :cpu]),
-      intensity: integer(100, 500)
-    }
+    let [
+      target <- oneof([:memory, :cpu]),
+      intensity <- integer(100, 500)
+    ] do
+      %{
+        target: target,
+        intensity: intensity
+      }
+    end
   end
 
   defp timing_attack_gen do

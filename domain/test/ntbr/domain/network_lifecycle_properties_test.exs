@@ -335,11 +335,14 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   end
 
   defp border_router_config_gen do
-    {
-      integer(1, 10),  # route count
-      boolean(),       # NAT64
-      vector(oneof([:high, :medium, :low]), integer(1, 3))  # priorities
-    }
+    let [
+      route_count <- integer(1, 10),
+      nat64_enabled <- boolean(),
+      num_priorities <- integer(1, 3)
+    ] do
+      priorities = List.duplicate(oneof([:high, :medium, :low]), num_priorities)
+      {route_count, nat64_enabled, priorities}
+    end
   end
 
   defp recovery_scenario_gen do
@@ -351,9 +354,11 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   end
 
   defp stale_device_scenario_gen do
-    let total <- integer(10, 50) do
-      stale = integer(1, div(total, 2))
-      timeout = integer(60, 600)
+    let [
+      total <- integer(10, 50),
+      stale <- integer(1, 25),
+      timeout <- integer(60, 600)
+    ] do
       {total, stale, timeout}
     end
   end
