@@ -560,9 +560,11 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       # Average should be around 8 bytes (half of 16 bytes)
       good_hamming = avg_hamming > 4 and avg_hamming < 12
       
-      uniform_distribution and no_patterns and good_hamming
+      result = uniform_distribution and no_patterns and good_hamming
+      
+      result
+      |> measure("Sample size", sample_size)
     end
-    |> measure("Sample size", fn size -> size end)
   end
 
   property "nonce reuse detection: counters never repeat",

@@ -122,8 +122,8 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       {:ok, _test_network} = Network.read(network.id)
       
       all_failed
+      |> measure("Concurrent attackers", length(concurrent_attackers))
     end
-    |> measure("Concurrent attackers", fn {_, attackers} -> length(attackers) end)
   end
 
   property "replay attacks are detected and rejected",
@@ -306,9 +306,9 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       end)
       
       system_stable and at_least_some_handled
+      |> measure("Attack intensity", attack_intensity)
+      |> classify(attack_intensity > 500, "extreme DoS")
     end
-    |> measure("Attack intensity", fn i -> i end)
-    |> classify(fn i -> i > 500 end, "extreme DoS")
   end
 
   property "rapid state changes don't cause race conditions",

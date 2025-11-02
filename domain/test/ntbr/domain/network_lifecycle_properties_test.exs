@@ -184,10 +184,12 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       eui64s = Enum.map(devices, & &1.extended_address)
       addresses_unique = length(eui64s) == length(Enum.uniq(eui64s))
       
-      all_succeeded and addresses_unique and length(devices) == device_count
+      result = all_succeeded and addresses_unique and length(devices) == device_count
+      
+      result
+      |> measure("Concurrent devices", device_count)
+      |> classify(device_count > 25, "high concurrency")
     end
-    |> measure("Concurrent devices", fn count -> count end)
-    |> classify(fn count -> count > 25 end, "high concurrency")
   end
 
   property "network recovers correctly after RCP reset at any point",
@@ -278,11 +280,12 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       # Verify
       remaining = Device.active_devices!(network.id)
       
-      length(stale) == stale_count and
-      length(remaining) == active_count
+      result = length(stale) == stale_count and length(remaining) == active_count
+      
+      result
+      |> measure("Total devices", total_count)
+      |> classify(stale_count > 10, "many stale devices")
     end
-    |> measure("Total devices", fn {total, _, _} -> total end)
-    |> classify(fn {_, stale, _} -> stale > 10 end, "many stale devices")
   end
 
   property "joiner expiration handling works at various timeout values",
@@ -306,9 +309,11 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       expired = Joiner.expired!()
       expired_ids = Enum.map(expired, & &1.id)
       
-      joiner.id in expired_ids
+      result = joiner.id in expired_ids
+      
+      result
+      |> measure("Timeout (seconds)", timeout_seconds)
     end
-    |> measure("Timeout (seconds)", fn timeout -> timeout end)
   end
 
   # Generators

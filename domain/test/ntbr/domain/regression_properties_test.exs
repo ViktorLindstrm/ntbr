@@ -179,10 +179,12 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       {:ok, joiner} = Joiner.start(joiner)
       
       # Verify expiration is set correctly
-      not is_nil(joiner.expires_at) and
-      DateTime.diff(joiner.expires_at, joiner.started_at, :second) == timeout
+      result = not is_nil(joiner.expires_at) and
+        DateTime.diff(joiner.expires_at, joiner.started_at, :second) == timeout
+      
+      result
+      |> measure("Timeout (seconds)", timeout)
     end
-    |> measure("Timeout (seconds)", fn t -> t end)
   end
 
   property "device topology NEVER creates cycles under ANY operations",
