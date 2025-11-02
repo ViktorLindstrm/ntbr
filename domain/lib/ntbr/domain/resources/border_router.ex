@@ -109,6 +109,17 @@ defmodule NTBR.Domain.Resources.BorderRouter do
       argument :next_hop_is_this_device, :boolean, default: true
       require_atomic? false
 
+      # Thread spec: Route preference must be one of :high, :medium, :low
+      validate fn changeset, context ->
+        preference = context.arguments.preference
+
+        if preference in [:high, :medium, :low] do
+          :ok
+        else
+          {:error, "Route preference must be one of: :high, :medium, :low (Thread spec)"}
+        end
+      end
+
       change fn changeset, context ->
         route = %{
           prefix: context.arguments.prefix,

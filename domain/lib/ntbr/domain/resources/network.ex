@@ -115,8 +115,8 @@ defmodule NTBR.Domain.Resources.Network do
       allow_nil?(false)
 
       default(%{
-        # Hours (default: 1 week)
-        rotation_time: 672,
+        # Hours (Thread spec: max 1 week = 168 hours)
+        rotation_time: 168,
         flags: %{
           obtain_network_key: true,
           native_commissioning: true,
@@ -263,6 +263,34 @@ defmodule NTBR.Domain.Resources.Network do
             :ok
         end
       end)
+
+      # Thread spec: Security policy rotation_time must be positive and max 1 week (168 hours)
+      validate(fn changeset, _context ->
+        security_policy = Ash.Changeset.get_attribute(changeset, :security_policy)
+
+        if security_policy && is_map(security_policy) do
+          rotation_time = Map.get(security_policy, :rotation_time)
+
+          cond do
+            is_nil(rotation_time) ->
+              :ok
+
+            not is_integer(rotation_time) ->
+              {:error, "Security policy rotation_time must be an integer"}
+
+            rotation_time <= 0 ->
+              {:error, "Security policy rotation_time must be positive"}
+
+            rotation_time > 168 ->
+              {:error, "Security policy rotation_time must not exceed 168 hours (1 week) per Thread spec"}
+
+            true ->
+              :ok
+          end
+        else
+          :ok
+        end
+      end)
     end
 
     read :read do
@@ -285,6 +313,34 @@ defmodule NTBR.Domain.Resources.Network do
 
     update :update do
       accept([:name, :network_name, :channel, :security_policy])
+
+      # Thread spec: Security policy rotation_time must be positive and max 1 week (168 hours)
+      validate(fn changeset, _context ->
+        security_policy = Ash.Changeset.get_attribute(changeset, :security_policy)
+
+        if security_policy && is_map(security_policy) do
+          rotation_time = Map.get(security_policy, :rotation_time)
+
+          cond do
+            is_nil(rotation_time) ->
+              :ok
+
+            not is_integer(rotation_time) ->
+              {:error, "Security policy rotation_time must be an integer"}
+
+            rotation_time <= 0 ->
+              {:error, "Security policy rotation_time must be positive"}
+
+            rotation_time > 168 ->
+              {:error, "Security policy rotation_time must not exceed 168 hours (1 week) per Thread spec"}
+
+            true ->
+              :ok
+          end
+        else
+          :ok
+        end
+      end)
     end
 
     update :update_credentials do
