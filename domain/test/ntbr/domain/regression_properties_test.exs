@@ -22,20 +22,20 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
         name: name,
         network_name: "TestNet"
       })
-      
-      # Validate based on name length constraints
+
+      # Validate based on name length constraints (Thread 1.3 spec: max 16 bytes)
       case String.length(name) do
         0 ->
-          # Empty names should fail
+          # Empty names should fail per Thread spec
           match?({:error, _}, result)
 
-        n when n > 0 and n <= 32 ->
-          # Valid length names should succeed
+        n when n > 0 and n <= 16 ->
+          # Valid length names should succeed (Thread spec: 1-16 bytes)
           # This is the core regression test - valid lengths must work
           match?({:ok, _}, result)
 
-        n when n > 32 ->
-          # Names too long should fail
+        n when n > 16 ->
+          # Names too long should fail (Thread spec max: 16 bytes)
           match?({:error, _}, result)
 
         _ ->
@@ -49,8 +49,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
         len == 0 -> :empty
         len < 5 -> :very_short
         len < 10 -> :short
-        len < 20 -> :medium
-        len < 32 -> :long
+        len <= 16 -> :valid_length
         true -> :too_long
       end
     end)

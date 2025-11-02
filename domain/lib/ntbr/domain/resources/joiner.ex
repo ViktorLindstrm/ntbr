@@ -310,6 +310,7 @@ defmodule NTBR.Domain.Resources.Joiner do
 
       validate(fn changeset, _context ->
         eui64 = Ash.Changeset.get_attribute(changeset, :eui64)
+        pskd = Ash.Changeset.get_attribute(changeset, :pskd)
 
         cond do
           is_nil(eui64) ->
@@ -317,6 +318,9 @@ defmodule NTBR.Domain.Resources.Joiner do
 
           byte_size(eui64) != 8 ->
             {:error, "EUI-64 must be exactly 8 bytes"}
+
+          not is_nil(pskd) and not valid_pskd?(pskd) ->
+            {:error, "PSKD must contain only uppercase alphanumeric characters (0-9, A-Z)"}
 
           true ->
             :ok
@@ -327,6 +331,16 @@ defmodule NTBR.Domain.Resources.Joiner do
     create :create_any do
       description("Create a wildcard joiner (any device with correct PSKD can join)")
       accept([:network_id, :pskd, :timeout])
+
+      validate(fn changeset, _context ->
+        pskd = Ash.Changeset.get_attribute(changeset, :pskd)
+
+        if not is_nil(pskd) and not valid_pskd?(pskd) do
+          {:error, "PSKD must contain only uppercase alphanumeric characters (0-9, A-Z)"}
+        else
+          :ok
+        end
+      end)
 
       change(fn changeset, _context ->
         # Explicitly set eui64 to nil for wildcard
@@ -498,4 +512,13 @@ defmodule NTBR.Domain.Resources.Joiner do
   Alias for expired_joiners with bang suffix for consistency.
   """
   def expired!(), do: expired_joiners!()
+
+  # Private helper functions
+
+  defp valid_pskd?(pskd) when is_binary(pskd) do
+    # Thread spec: PSKD must contain only alphanumeric characters (0-9, A-Z, case-insensitive)
+    String.match?(pskd, ~r/^[0-9A-Z]+$/i)
+  end
+
+  defp valid_pskd?(_), do: false
 end
