@@ -515,6 +515,7 @@ defmodule NTBR.Domain.Resources.Joiner do
 
   # Private helper functions
 
+  @spec valid_pskd?(term()) :: boolean()
   defp valid_pskd?(pskd) when is_binary(pskd) do
     # Thread spec: PSKD must contain only alphanumeric characters (0-9, A-Z, case-insensitive)
     String.match?(pskd, ~r/^[0-9A-Z]+$/i)

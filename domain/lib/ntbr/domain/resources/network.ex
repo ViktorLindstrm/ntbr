@@ -440,6 +440,7 @@ defmodule NTBR.Domain.Resources.Network do
 
   # Private helper functions
 
+  @spec generate_network_key_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_network_key_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :network_key) do
       changeset
@@ -448,6 +449,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_pan_id_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_pan_id_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :pan_id) do
       changeset
@@ -458,6 +460,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_extended_pan_id_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_extended_pan_id_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :extended_pan_id) do
       changeset
@@ -466,6 +469,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_mesh_local_prefix_if_missing(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp generate_mesh_local_prefix_if_missing(changeset) do
     if Ash.Changeset.get_attribute(changeset, :mesh_local_prefix) do
       changeset
@@ -475,6 +479,7 @@ defmodule NTBR.Domain.Resources.Network do
     end
   end
 
+  @spec generate_mesh_local_prefix() :: String.t()
   defp generate_mesh_local_prefix do
     # Generate Thread mesh-local prefix per RFC 4193
     # Format: fdXX:XXXX:XXXX:XXXX::/64
