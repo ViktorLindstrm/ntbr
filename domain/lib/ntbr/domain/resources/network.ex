@@ -343,6 +343,7 @@ defmodule NTBR.Domain.Resources.Network do
   code_interface do
     define(:create)
     define(:read)
+    define(:list, action: :read)
     define(:by_name, args: [:name])
     define(:operational)
     define(:leaders)
@@ -357,8 +358,28 @@ defmodule NTBR.Domain.Resources.Network do
     define(:disable)
     define(:by_id, action: :read, get_by: [:id])
     # define :by_id!, action: :read, get_by: [:id], not_found_error?: true
+  end
 
-    define_calculation(:operational_dataset)
+  @doc """
+  Returns the operational dataset for a network.
+  Automatically loads the calculation if not already loaded.
+  """
+  def operational_dataset(network) when is_struct(network, __MODULE__) do
+    network
+    |> Ash.load!(:operational_dataset)
+    |> Map.get(:operational_dataset)
+  end
+
+  def operational_dataset(network_id) when is_binary(network_id) do
+    {:ok, network} = read(network_id, load: [:operational_dataset])
+    Map.get(network, :operational_dataset)
+  end
+
+  @doc """
+  Returns the operational dataset for a network, raising on error.
+  """
+  def operational_dataset!(network_or_id) do
+    operational_dataset(network_or_id)
   end
 
   # Private helper functions

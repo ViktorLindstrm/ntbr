@@ -483,11 +483,19 @@ defmodule NTBR.Domain.Resources.Joiner do
     define(:wildcards)
     define(:specific)
     define(:by_eui64, args: [:eui64])
+    define(:by_eui64!, args: [:eui64], get?: true)
     define(:expired_joiners)
     define(:link_device, args: [:device_id])
     define(:start)
     define(:complete)
     define(:fail)
     define(:expire)
+    define(:by_id, action: :read, get_by: [:id])
+    define(:by_id!, action: :read, get_by: [:id], get?: true)
   end
+
+  @doc """
+  Alias for expired_joiners with bang suffix for consistency.
+  """
+  def expired!(), do: expired_joiners!()
 end
