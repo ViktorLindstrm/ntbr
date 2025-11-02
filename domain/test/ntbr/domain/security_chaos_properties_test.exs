@@ -672,9 +672,9 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
 
   defp brute_force_attack_gen do
     let {network_id, attempt_count} <- {integer(1, 10000), integer(10, 100)} do
-      attempts = Enum.map(1..attempt_count, fn i ->
+      attempts = Enum.map(1..attempt_count, fn _i ->
         # Generate wrong PSKDs
-        chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%'
+        chars = ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%"
         length = Enum.random(6..32)
         for _ <- 1..length, into: "", do: <<Enum.random(chars)>>
       end)

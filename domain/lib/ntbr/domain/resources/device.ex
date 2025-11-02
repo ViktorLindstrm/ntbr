@@ -159,6 +159,18 @@ defmodule NTBR.Domain.Resources.Device do
         end
       end
 
+      # Prevent self-reference in parent relationship
+      validate fn changeset, _context ->
+        parent_id = Ash.Changeset.get_attribute(changeset, :parent_id)
+        device_id = Ash.Changeset.get_attribute(changeset, :id)
+
+        if parent_id && device_id && parent_id == device_id do
+          {:error, "Device cannot be its own parent"}
+        else
+          :ok
+        end
+      end
+
       # Thread spec: Only routers and leaders can have children
       validate fn changeset, _context ->
         parent_id = Ash.Changeset.get_attribute(changeset, :parent_id)
@@ -263,8 +275,20 @@ defmodule NTBR.Domain.Resources.Device do
     end
 
     update :update do
-      accept [:ipv6_addresses, :device_type, :mode, :link_quality, :rssi, 
+      accept [:ipv6_addresses, :device_type, :mode, :link_quality, :rssi,
               :parent_id, :version, :active]
+
+      # Prevent self-reference in parent relationship
+      validate fn changeset, _context ->
+        parent_id = Ash.Changeset.get_attribute(changeset, :parent_id)
+        device_id = changeset.data.id
+
+        if parent_id && device_id && parent_id == device_id do
+          {:error, "Device cannot be its own parent"}
+        else
+          :ok
+        end
+      end
     end
 
     update :update_last_seen do

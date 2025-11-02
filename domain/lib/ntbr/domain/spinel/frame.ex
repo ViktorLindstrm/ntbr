@@ -41,27 +41,35 @@ defmodule NTBR.Domain.Spinel.Frame do
   @doc """
   Creates a new Spinel frame with validated inputs.
 
+  TID values automatically wrap to the valid range 0-15 using modulo 16.
+
   ## Examples
 
       iex> Frame.new(:reset, <<>>)
       %Frame{header: 0x80, command: :reset, tid: 0, payload: <<>>}
-      
+
       iex> Frame.new(:prop_value_get, <<0x01>>, tid: 5)
       %Frame{header: 0x85, command: :prop_value_get, tid: 5, payload: <<0x01>>}
-      
+
+      iex> Frame.new(:reset, <<>>, tid: 20)
+      %Frame{header: 0x84, command: :reset, tid: 4, payload: <<>>}
+
   ## Errors
 
-  Raises `ArgumentError` if TID is out of range (0-15).
+  Raises `ArgumentError` if TID is not an integer.
   """
   @spec new(command(), payload(), keyword()) :: t()
   def new(command, payload \\ <<>>, opts \\ [])
       when is_binary(payload) and is_list(opts) do
-    tid = Keyword.get(opts, :tid, 0)
+    tid_input = Keyword.get(opts, :tid, 0)
 
-    unless is_integer(tid) and tid in 0..15 do
+    unless is_integer(tid_input) do
       raise ArgumentError,
-            "TID must be an integer in range 0..15, got: #{inspect(tid)}"
+            "TID must be an integer, got: #{inspect(tid_input)}"
     end
+
+    # Wrap TID to valid range (0-15) using modulo 16
+    tid = rem(tid_input, 16)
 
     header = build_header(tid)
 
