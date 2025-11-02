@@ -35,7 +35,6 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
       |> measure("Time per frame (μs)", Float.round(time_per_frame, 2))
     end
   end
-  end
 
   property "frame decoding throughput scales linearly",
            [:verbose, {:numtests, 50}] do
