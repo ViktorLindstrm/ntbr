@@ -240,6 +240,8 @@ defmodule NTBR.Domain.Resources.BorderRouter do
   end
 
   # Private helper functions
+
+  @spec maybe_generate_on_mesh_prefix(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp maybe_generate_on_mesh_prefix(changeset) do
     case Ash.Changeset.get_attribute(changeset, :on_mesh_prefix) do
       nil ->
@@ -257,6 +259,7 @@ defmodule NTBR.Domain.Resources.BorderRouter do
     end
   end
 
+  @spec maybe_generate_backbone_interface_id(Ash.Changeset.t()) :: Ash.Changeset.t()
   defp maybe_generate_backbone_interface_id(changeset) do
     case Ash.Changeset.get_attribute(changeset, :backbone_interface_id) do
       nil ->
