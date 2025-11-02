@@ -9,6 +9,7 @@ defmodule NTBR.Domain.Test.AshGenerators do
   PropCheck patterns for dependent values and type safety.
   """
   use PropCheck
+  import PropCheck
 
   @type uuid :: String.t()
 
