@@ -245,13 +245,14 @@ defmodule NTBR.Domain.Resources.BorderRouter do
   defp maybe_generate_on_mesh_prefix(changeset) do
     case Ash.Changeset.get_attribute(changeset, :on_mesh_prefix) do
       nil ->
-        # Generate a ULA prefix: fd + 40 random bits + ::/64
-        random_hex =
-          :crypto.strong_rand_bytes(5)
-          |> Base.encode16(case: :lower)
-          |> String.slice(0..9)
+        # Generate a ULA /64 prefix: fdXX:XXXX:XXXX:XXXX::/64
+        # Need 7 bytes for the random parts (first group has 'fd' prefix + 2 hex chars)
+        random_hex = :crypto.strong_rand_bytes(7) |> Base.encode16(case: :lower)
 
-        prefix = "fd#{random_hex}::/64"
+        # Format: fd + 2 hex chars, then 3 groups of 4 hex chars each
+        <<seg1::binary-size(2), seg2::binary-size(4), seg3::binary-size(4), seg4::binary-size(4)>> = random_hex
+
+        prefix = "fd#{seg1}:#{seg2}:#{seg3}:#{seg4}::/64"
         Ash.Changeset.change_attribute(changeset, :on_mesh_prefix, prefix)
 
       _ ->
