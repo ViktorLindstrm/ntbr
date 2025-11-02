@@ -284,7 +284,7 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
         extended_address: :crypto.strong_rand_bytes(8),
         rloc16: :rand.uniform(0xFFFF),
         device_type: :end_device,
-        parent_id: parent.extended_address,
+        parent_id: parent.id,  # Use device ID (UUID), not extended_address (binary)
         link_quality: 2,
         rssi: -60
       })
