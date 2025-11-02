@@ -54,10 +54,11 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       # Both are acceptable outcomes:
       # 1. All transitions valid and final state valid, OR
       # 2. Some transitions invalid (expected for property testing) but system didn't crash
-      final_state_valid
+      result = final_state_valid
+      
+      aggregate(:sequence_length, length(transition_sequence),
+        classify(:leader in transition_sequence, "reaches leader state", result))
     end
-    |> aggregate(:sequence_length, &length/1)
-    |> classify(fn seq -> :leader in seq end, "reaches leader state")
   end
 
   property "device commissioning completes successfully under various conditions",
@@ -184,10 +185,11 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       eui64s = Enum.map(devices, & &1.extended_address)
       addresses_unique = length(eui64s) == length(Enum.uniq(eui64s))
       
-      all_succeeded and addresses_unique and length(devices) == device_count
+      result = all_succeeded and addresses_unique and length(devices) == device_count
+      
+      measure("Concurrent devices", device_count,
+        classify(device_count > 25, "high concurrency", result))
     end
-    |> measure("Concurrent devices", fn count -> count end)
-    |> classify(fn count -> count > 25 end, "high concurrency")
   end
 
   property "network recovers correctly after RCP reset at any point",
@@ -278,11 +280,11 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       # Verify
       remaining = Device.active_devices!(network.id)
       
-      length(stale) == stale_count and
-      length(remaining) == active_count
+      result = length(stale) == stale_count and length(remaining) == active_count
+      
+      measure("Total devices", total_devices,
+        classify(stale_count > 10, "many stale devices", result))
     end
-    |> measure("Total devices", fn {total, _, _} -> total end)
-    |> classify(fn {_, stale, _} -> stale > 10 end, "many stale devices")
   end
 
   property "joiner expiration handling works at various timeout values",
@@ -306,9 +308,10 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       expired = Joiner.expired!()
       expired_ids = Enum.map(expired, & &1.id)
       
-      joiner.id in expired_ids
+      result = joiner.id in expired_ids
+      
+      measure("Timeout (seconds)", timeout_seconds, result)
     end
-    |> measure("Timeout (seconds)", fn timeout -> timeout end)
   end
 
   # Generators

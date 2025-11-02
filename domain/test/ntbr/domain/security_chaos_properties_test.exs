@@ -71,10 +71,12 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       # Legitimate joiner should still work
       {:ok, _started} = Joiner.start(legitimate_joiner)
       
-      all_attacks_failed
+      result = all_attacks_failed
+      attack_count = length(attack_attempts)
+      
+      aggregate(:attack_count, attack_count,
+        classify(attack_count > 50, "high intensity attack", result))
     end
-    |> aggregate(:attack_count, fn {_, attempts} -> length(attempts) end)
-    |> classify(fn {_, attempts} -> length(attempts) > 50 end, "high intensity attack")
   end
 
   property "concurrent authentication attempts don't bypass security",
@@ -121,9 +123,11 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       # System should still be operational
       {:ok, _test_network} = Network.read(network.id)
       
-      all_failed
+      result = all_failed
+      attacker_count = length(concurrent_attackers)
+      
+      measure("Concurrent attackers", attacker_count, result)
     end
-    |> measure("Concurrent attackers", fn {_, attackers} -> length(attackers) end)
   end
 
   property "replay attacks are detected and rejected",
@@ -305,10 +309,11 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
         _ -> false
       end)
       
-      system_stable and at_least_some_handled
+      result = system_stable and at_least_some_handled
+      
+      measure("Attack intensity", attack_intensity,
+        classify(attack_intensity > 500, "extreme DoS", result))
     end
-    |> measure("Attack intensity", fn i -> i end)
-    |> classify(fn i -> i > 500 end, "extreme DoS")
   end
 
   property "rapid state changes don't cause race conditions",
