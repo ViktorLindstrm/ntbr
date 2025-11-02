@@ -10,6 +10,8 @@ defmodule NTBR.Domain.Test.AshGenerators do
   """
   use PropCheck
   import PropCheck
+  import Bitwise
+  import PropCheck.BasicTypes
 
   @type uuid :: String.t()
 
@@ -366,7 +368,7 @@ defmodule NTBR.Domain.Test.AshGenerators do
   end
 
   defp frame_data_gen do
-    let {command, tid, payload} <- {
+    let {_command, tid, payload} <- {
       oneof([:prop_value_get, :prop_value_set, :prop_value_is]),
       integer(0, 15),
       binary()
