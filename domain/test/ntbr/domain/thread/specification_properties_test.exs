@@ -54,12 +54,21 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
       dataset = Network.operational_dataset(network)
       policy = dataset.security_policy
       
-      # Thread spec requirements
+      # Thread 1.3 Specification Requirements (Section 8.10.1.15)
+      # rotation_time constraints:
+      #   - MUST be > 0: A value of 0 would disable key rotation, which is 
+      #     not permitted by the Thread specification
+      #   - MUST be <= 168 hours (1 week): Maximum rotation period to ensure
+      #     timely key rotation for security purposes
+      # 
+      # Rationale: Regular key rotation is a fundamental security requirement
+      # in Thread networks to limit the window of compromise if a key is leaked.
+      # The 168-hour maximum ensures keys are rotated at least weekly.
       is_map(policy) and
       Map.has_key?(policy, :rotation_time) and
       Map.has_key?(policy, :flags) and
       policy.rotation_time > 0 and
-      policy.rotation_time <= 168 and  # Max 1 week in hours
+      policy.rotation_time <= 168 and
       is_map(policy.flags)
     end
   end
