@@ -71,10 +71,12 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       # Legitimate joiner should still work
       {:ok, _started} = Joiner.start(legitimate_joiner)
       
-      all_attacks_failed
+      result = all_attacks_failed
+      attack_count = length(attack_attempts)
+      
+      aggregate(:attack_count, attack_count,
+        classify(attack_count > 50, "high intensity attack", result))
     end
-    |> aggregate(:attack_count, fn {_, attempts} -> length(attempts) end)
-    |> classify(fn {_, attempts} -> length(attempts) > 50 end, "high intensity attack")
   end
 
   property "concurrent authentication attempts don't bypass security",
@@ -119,10 +121,12 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       end)
       
       # System should still be operational
-      {:ok, _test_network} = Network.read(network.id)
+      {:ok, _test_network} = Network.by_id(network.id)
       
-      all_failed
-      |> measure("Concurrent attackers", length(concurrent_attackers))
+      result = all_failed
+      attacker_count = length(concurrent_attackers)
+      
+      measure("Concurrent attackers", attacker_count, result)
     end
   end
 
@@ -228,7 +232,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # Verify name is stored safely
-          retrieved = Network.read!(network.id)
+          retrieved = Network.by_id!(network.id)
           is_binary(retrieved.name)
         
         {:error, _} ->
@@ -305,9 +309,10 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
         _ -> false
       end)
       
-      system_stable and at_least_some_handled
-      |> measure("Attack intensity", attack_intensity)
-      |> classify(attack_intensity > 500, "extreme DoS")
+      result = system_stable and at_least_some_handled
+      
+      measure("Attack intensity", attack_intensity,
+        classify(attack_intensity > 500, "extreme DoS", result))
     end
   end
 
@@ -325,15 +330,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
           try do
             case transition do
               :attach -> 
-                net = Network.read!(network.id)
+                net = Network.by_id!(network.id)
                 Network.attach(net)
               
               :detach ->
-                net = Network.read!(network.id)
+                net = Network.by_id!(network.id)
                 Network.detach(net)
               
               :promote ->
-                net = Network.read!(network.id)
+                net = Network.by_id!(network.id)
                 Network.promote(net)
             end
           rescue
@@ -345,7 +350,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       results = Enum.map(tasks, &Task.await(&1, 5000))
       
       # System should maintain consistency
-      final_network = Network.read!(network.id)
+      final_network = Network.by_id!(network.id)
       valid_final_state = final_network.state in [:detached, :child, :router, :leader]
       
       # No crashes
@@ -546,7 +551,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
           # For now, check it didn't just blindly accept
           updated.device_type == :end_device or
           # If it changed, verify network state allows it
-          Network.read!(network.id).state == :leader
+          Network.by_id!(network.id).state == :leader
         
         {:error, _} ->
           true
@@ -648,7 +653,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # If accepted, should be safely stored
-          retrieved = Network.read!(network.id)
+          retrieved = Network.by_id!(network.id)
           String.valid?(retrieved.name)
         
         {:error, _} ->
@@ -699,10 +704,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
 
   @spec replay_attack_gen() :: PropCheck.type()
   defp replay_attack_gen do
-    %{
-      replay_count: integer(5, 20),
-      delay_between: integer(0, 100)
-    }
+    let [
+      replay_count <- integer(5, 20),
+      delay_between <- integer(0, 100)
+    ] do
+      %{
+        replay_count: replay_count,
+        delay_between: delay_between
+      }
+    end
   end
 
   @spec sql_injection_gen() :: PropCheck.type()
@@ -756,10 +766,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
 
   @spec resource_exhaustion_gen() :: PropCheck.type()
   defp resource_exhaustion_gen do
-    %{
-      target: oneof([:memory, :cpu]),
-      intensity: integer(100, 500)
-    }
+    let [
+      target <- oneof([:memory, :cpu]),
+      intensity <- integer(100, 500)
+    ] do
+      %{
+        target: target,
+        intensity: intensity
+      }
+    end
   end
 
   @spec timing_attack_gen() :: {String.t(), list(String.t())}

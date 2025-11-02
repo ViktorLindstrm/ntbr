@@ -17,8 +17,12 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
 
   # Test setup with mocks
   setup do
-    # Start test supervision tree
-    start_supervised!({Phoenix.PubSub, name: NTBR.PubSub})
+    # Start test supervision tree (check if PubSub already running)
+    case start_supervised({Phoenix.PubSub, name: NTBR.PubSub}) do
+      {:ok, _pid} -> :ok
+      {:error, {:already_started, _pid}} -> :ok
+      {:error, reason} -> raise "Failed to start PubSub: #{inspect(reason)}"
+    end
 
     # Mock Spinel Client
     Mox.defmock(SpinelClientMock, for: NTBR.Domain.Spinel.ClientBehaviour)
