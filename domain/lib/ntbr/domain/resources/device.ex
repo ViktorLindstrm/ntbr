@@ -277,6 +277,7 @@ defmodule NTBR.Domain.Resources.Device do
     update :update do
       accept [:ipv6_addresses, :device_type, :mode, :link_quality, :rssi,
               :parent_id, :version, :active]
+      require_atomic?(false)
 
       # Prevent self-reference in parent relationship
       validate fn changeset, _context ->
