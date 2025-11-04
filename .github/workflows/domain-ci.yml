@@ -232,15 +232,16 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "  - Mode: PR (fast feedback with smart test selection)"
             echo "  - Excluding: Performance tests (tagged with :performance)"
+            EXCLUDE_PERF="--exclude performance"
             TEST_PATTERN="${{ steps.detect-tests.outputs.pattern }}"
             TEST_DESC="${{ steps.detect-tests.outputs.description }}"
             if [ -n "$TEST_PATTERN" ]; then
               echo "  - Running: $TEST_DESC"
-              echo "  - Test selection: $TEST_PATTERN --exclude performance"
-              TEST_PATTERN="$TEST_PATTERN --exclude performance"
+              echo "  - Test selection: $TEST_PATTERN $EXCLUDE_PERF"
+              TEST_PATTERN="$TEST_PATTERN $EXCLUDE_PERF"
             else
               echo "  - Running: All tests except performance"
-              TEST_PATTERN="--exclude performance"
+              TEST_PATTERN="$EXCLUDE_PERF"
             fi
           else
             echo "  - Mode: Merge (thorough testing - all tests including performance)"
