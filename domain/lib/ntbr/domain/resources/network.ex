@@ -212,8 +212,9 @@ defmodule NTBR.Domain.Resources.Network do
 
     transitions do
       transition(:attach, from: [:detached, :disabled], to: :child)
-      # Allow promote to go child->router or router->leader for flexible API
-      transition(:promote, from: [:child, :router], to: [:router, :leader])
+      # Promote has two separate transitions for flexibility
+      transition(:promote, from: :child, to: :router)
+      transition(:promote, from: :router, to: :leader)
       transition(:become_leader, from: [:router, :child], to: :leader)
       transition(:demote, from: [:router, :leader], to: :child)
       transition(:detach, from: [:child, :router, :leader], to: :detached)
@@ -387,7 +388,12 @@ defmodule NTBR.Domain.Resources.Network do
             changeset
           _ ->
             # Invalid state for promotion
-            Ash.Changeset.add_error(changeset, "Cannot promote from #{current_state} state")
+            Ash.Changeset.add_error(
+              changeset,
+              field: :state,
+              message: "Cannot promote from #{current_state} state. Valid states for promotion are: child (to router) or router (to leader)"
+            )
+            changeset
         end
       end)
     end
