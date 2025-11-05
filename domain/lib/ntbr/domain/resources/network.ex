@@ -372,28 +372,31 @@ defmodule NTBR.Domain.Resources.Network do
       description("Promote from child to router role, or router to leader")
       require_atomic?(false)
       
-      # Make promote flexible - can go child->router or router->leader
+      # Dynamically determine target state based on current state
       change(fn changeset, context ->
         current_state = Ash.Changeset.get_attribute(changeset, :state)
         
         case current_state do
           :child ->
-            # Normal case: child -> router
+            # Valid transition: child -> router
             transition_state(:router).(changeset, context)
+            
           :router ->
-            # Allow router -> leader via promote (flexible API)
+            # Valid transition: router -> leader
             transition_state(:leader).(changeset, context)
+            
           :leader ->
-            # Already at highest state, return unchanged (idempotent)
+            # Already at highest state - idempotent behavior
+            # Return unchanged changeset without error
+            # Note: This won't call transition_state, so no state machine validation
+            # But that's OK because we're not changing state
             changeset
+            
           _ ->
-            # Invalid state for promotion
-            Ash.Changeset.add_error(
-              changeset,
-              field: :state,
-              message: "Cannot promote from #{current_state} state. Valid states for promotion are: child (to router) or router (to leader)"
-            )
-            changeset
+            # Invalid source state (e.g., :detached, :disabled)
+            # Try to transition anyway - AshStateMachine will reject with proper error
+            # We pick :router as a default target, but it will fail validation
+            transition_state(:router).(changeset, context)
         end
       end)
     end

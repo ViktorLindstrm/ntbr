@@ -423,14 +423,14 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   defp apply_transition(network_id, current_state, transition) do
     case Network.by_id(network_id) do
       {:ok, network} ->
-        result = case {current_state, transition} do
-          {:detached, :attach} -> Network.attach(network)
-          {:child, :promote} -> Network.promote(network)
-          {:router, :promote} -> Network.promote(network)
-          {:leader, :demote} -> Network.demote(network)
-          {:router, :demote} -> Network.demote(network)
-          {_, :detach} -> Network.detach(network)
-          _ -> {:error, :invalid_transition}
+        # Try to apply the transition based on the action type
+        # Let the Network resource and state machine handle validation
+        result = case transition do
+          :attach -> Network.attach(network)
+          :promote -> Network.promote(network)
+          :demote -> Network.demote(network)
+          :detach -> Network.detach(network)
+          _ -> {:error, :unknown_transition}
         end
         
         # Extract the new state from the result
