@@ -142,6 +142,24 @@ defmodule NTBR.Domain.Thread.NetworkManager do
     end
   end
 
+  @doc """
+  Processes a topology update with router and child lists.
+  
+  This is typically called during testing or when manually feeding
+  topology data from external sources.
+  
+  ## Parameters
+    - `network_id` - The network ID to update devices for
+    - `routers` - List of router device info maps
+    - `children` - List of child/end device info maps
+  """
+  @spec process_topology_update(String.t(), list(), list()) :: :ok
+  def process_topology_update(network_id, routers, children) do
+    update_devices(network_id, routers, :router)
+    update_devices(network_id, children, :end_device)
+    :ok
+  end
+
   # Server Callbacks
 
   @impl true
