@@ -68,6 +68,7 @@ defmodule Web.MixProject do
       
       # Development and testing
       {:propcheck, "~> 1.5", only: :test},
+      {:junit_formatter, "~> 3.3", only: :test},
       {:ex_doc, "~> 0.31", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}

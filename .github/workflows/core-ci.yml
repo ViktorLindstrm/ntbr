@@ -143,7 +143,7 @@ jobs:
           echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
           echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
           echo "======================================"
-          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+          mix test --formatter JUnitFormatter --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
             echo ""
             echo "======================================"
             echo "❌ TESTS FAILED"
@@ -154,6 +154,39 @@ jobs:
           echo "======================================"
           echo "✅ ALL TESTS PASSED"
           echo "======================================"
+
+      - name: Generate test summary
+        if: always()
+        run: |
+          if [ -f "_build/test/lib/ntbr_core/test-junit-report.xml" ]; then
+            echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract test statistics from JUnit XML
+            total=$(grep -oP 'tests="\K[0-9]+' _build/test/lib/ntbr_core/test-junit-report.xml | head -1)
+            failures=$(grep -oP 'failures="\K[0-9]+' _build/test/lib/ntbr_core/test-junit-report.xml | head -1)
+            errors=$(grep -oP 'errors="\K[0-9]+' _build/test/lib/ntbr_core/test-junit-report.xml | head -1)
+            skipped=$(grep -oP 'skipped="\K[0-9]+' _build/test/lib/ntbr_core/test-junit-report.xml | head -1)
+            
+            passed=$((total - failures - errors - skipped))
+            
+            echo "**Core Module Test Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Passed: $passed" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ Failed: $failures" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚠️ Errors: $errors" >> $GITHUB_STEP_SUMMARY
+            echo "- ⏭️ Skipped: $skipped" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 Total: $total" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload JUnit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-core-${{ github.run_id }}
+          path: core/_build/test/lib/ntbr_core/test-junit-report.xml
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload PropCheck counterexamples
         if: failure()

@@ -255,7 +255,7 @@ jobs:
           # If TEST_PATTERN is empty, run all tests
           # If TEST_PATTERN contains --only flags, use them for tag-based filtering
           if [ -z "$TEST_PATTERN" ]; then
-            mix test test/ntbr/domain/ --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            mix test test/ntbr/domain/ --formatter JUnitFormatter --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
               echo ""
               echo "======================================"
               echo "❌ TESTS FAILED"
@@ -263,7 +263,7 @@ jobs:
               exit 1
             }
           else
-            mix test test/ntbr/domain/ $TEST_PATTERN --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            mix test test/ntbr/domain/ $TEST_PATTERN --formatter JUnitFormatter --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
               echo ""
               echo "======================================"
               echo "❌ TESTS FAILED"
@@ -275,6 +275,46 @@ jobs:
           echo "======================================"
           echo "✅ ALL TESTS PASSED"
           echo "======================================"
+
+      - name: Generate test summary
+        if: always()
+        working-directory: domain
+        run: |
+          if [ -f "_build/test/lib/ntbr_domain/test-junit-report.xml" ]; then
+            echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Extract test statistics from JUnit XML
+            total=$(grep -oP 'tests="\K[0-9]+' _build/test/lib/ntbr_domain/test-junit-report.xml | head -1)
+            failures=$(grep -oP 'failures="\K[0-9]+' _build/test/lib/ntbr_domain/test-junit-report.xml | head -1)
+            errors=$(grep -oP 'errors="\K[0-9]+' _build/test/lib/ntbr_domain/test-junit-report.xml | head -1)
+            skipped=$(grep -oP 'skipped="\K[0-9]+' _build/test/lib/ntbr_domain/test-junit-report.xml | head -1)
+            
+            passed=$((total - failures - errors - skipped))
+            
+            echo "**Domain Module Test Results:**" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Passed: $passed" >> $GITHUB_STEP_SUMMARY
+            echo "- ❌ Failed: $failures" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚠️ Errors: $errors" >> $GITHUB_STEP_SUMMARY
+            echo "- ⏭️ Skipped: $skipped" >> $GITHUB_STEP_SUMMARY
+            echo "- 📊 Total: $total" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              echo "**Test Mode:** PR (Fast feedback with smart test selection)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "**Test Mode:** Merge (Thorough testing - all tests)" >> $GITHUB_STEP_SUMMARY
+            fi
+          fi
+
+      - name: Upload JUnit test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-results-domain-${{ github.run_id }}
+          path: domain/_build/test/lib/ntbr_domain/test-junit-report.xml
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload PropCheck counterexamples
         if: failure()
