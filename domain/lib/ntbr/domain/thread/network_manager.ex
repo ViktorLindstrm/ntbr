@@ -118,6 +118,24 @@ defmodule NTBR.Domain.Thread.NetworkManager do
   end
 
   @doc """
+  Processes topology update with given router and child lists.
+  
+  This is used for testing or manual topology updates without RCP.
+  Updates the device table with the provided device information.
+  
+  ## Parameters
+  - `network_id` - The ID of the network to update
+  - `routers` - List of router device maps
+  - `children` - List of child device maps
+  """
+  @spec process_topology_update(String.t(), list(), list()) :: :ok
+  def process_topology_update(network_id, routers, children) do
+    update_devices(network_id, routers, :router)
+    update_devices(network_id, children, :end_device)
+    :ok
+  end
+
+  @doc """
   Gets the current state of the NetworkManager.
   
   Returns a map containing:
