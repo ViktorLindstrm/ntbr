@@ -10,10 +10,19 @@ Mox.defmock(NTBR.Domain.Spinel.ClientMock, for: NTBR.Domain.Spinel.ClientBehavio
 # Start test infrastructure
 {:ok, _} = Application.ensure_all_started(:phoenix_pubsub)
 
-# Start PubSub for Spinel events (used by NetworkManager)
-case Phoenix.PubSub.start_link(name: NTBR.PubSub) do
-  {:ok, _pid} -> :ok
-  {:error, {:already_started, _pid}} -> :ok
+# Ensure the domain application is started (which starts PubSub)
+# If already started, this is a no-op
+case Application.ensure_all_started(:ntbr_domain) do
+  {:ok, _} -> :ok
+  {:error, {:already_started, :ntbr_domain}} -> :ok
+  {:error, reason} ->
+    # If app fails to start, continue anyway but log warning
+    IO.puts("Warning: Could not start :ntbr_domain application: #{inspect(reason)}")
+    # Start PubSub directly as fallback
+    case Phoenix.PubSub.start_link(name: NTBR.PubSub) do
+      {:ok, _pid} -> :ok
+      {:error, {:already_started, _pid}} -> :ok
+    end
 end
 
 # Start a mock Spinel Client process for integration tests that expect it to exist
