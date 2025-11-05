@@ -391,7 +391,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       :exit, {:noproc, _} -> :ok  # Client not running, skip configuration
     end
     
-    case desired_state do
+    # Transition to desired state
+    result = case desired_state do
       :detached -> 
         {:ok, network}
       
@@ -399,27 +400,46 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
         Network.attach(network)
       
       :router ->
-        {:ok, network} = Network.attach(network)
-        Network.promote(network)
+        with {:ok, network} <- Network.attach(network),
+             {:ok, network} <- Network.promote(network) do
+          {:ok, network}
+        end
       
       :leader ->
-        {:ok, network} = Network.attach(network)
-        {:ok, network} = Network.promote(network)
-        Network.promote(network)
+        with {:ok, network} <- Network.attach(network),
+             {:ok, network} <- Network.promote(network),
+             {:ok, network} <- Network.promote(network) do
+          {:ok, network}
+        end
+    end
+    
+    # Ensure we always return the network or error
+    case result do
+      {:ok, _network} = success -> success
+      {:error, _} = error -> error
     end
   end
 
   defp apply_transition(network_id, current_state, transition) do
-    network = Network.read!(network_id)
-    
-    case {current_state, transition} do
-      {:detached, :attach} -> Network.attach(network)
-      {:child, :promote} -> Network.promote(network)
-      {:router, :promote} -> Network.promote(network)
-      {:leader, :demote} -> Network.demote(network)
-      {:router, :demote} -> Network.demote(network)
-      {_, :detach} -> Network.detach(network)
-      _ -> {:error, :invalid_transition}
+    case Network.by_id(network_id) do
+      {:ok, network} ->
+        result = case {current_state, transition} do
+          {:detached, :attach} -> Network.attach(network)
+          {:child, :promote} -> Network.promote(network)
+          {:router, :promote} -> Network.promote(network)
+          {:leader, :demote} -> Network.demote(network)
+          {:router, :demote} -> Network.demote(network)
+          {_, :detach} -> Network.detach(network)
+          _ -> {:error, :invalid_transition}
+        end
+        
+        # Extract the new state from the result
+        case result do
+          {:ok, updated_network} -> {:ok, updated_network.state}
+          {:error, _} = error -> error
+        end
+      
+      {:error, _} = error -> error
     end
   end
 
