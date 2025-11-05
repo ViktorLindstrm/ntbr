@@ -212,9 +212,10 @@ defmodule NTBR.Domain.Resources.Network do
 
     transitions do
       transition(:attach, from: [:detached, :disabled], to: :child)
-      # Promote has two separate transitions for flexibility
+      # Promote has multiple transitions for flexibility
       transition(:promote, from: :child, to: :router)
       transition(:promote, from: :router, to: :leader)
+      transition(:promote, from: :leader, to: :leader)  # Idempotent: promoting leader keeps it leader
       transition(:become_leader, from: [:router, :child], to: :leader)
       transition(:demote, from: [:router, :leader], to: :child)
       transition(:detach, from: [:child, :router, :leader], to: :detached)
@@ -376,28 +377,16 @@ defmodule NTBR.Domain.Resources.Network do
       change(fn changeset, context ->
         current_state = Ash.Changeset.get_attribute(changeset, :state)
         
-        case current_state do
-          :child ->
-            # Valid transition: child -> router
-            transition_state(:router).(changeset, context)
-            
-          :router ->
-            # Valid transition: router -> leader
-            transition_state(:leader).(changeset, context)
-            
-          :leader ->
-            # Already at highest state - idempotent behavior
-            # Return unchanged changeset without error
-            # Note: This won't call transition_state, so no state machine validation
-            # But that's OK because we're not changing state
-            changeset
-            
-          _ ->
-            # Invalid source state (e.g., :detached, :disabled)
-            # Try to transition anyway - AshStateMachine will reject with proper error
-            # We pick :router as a default target, but it will fail validation
-            transition_state(:router).(changeset, context)
+        # Determine the target state for this promotion
+        target_state = case current_state do
+          :child -> :router    # Valid transition: child -> router
+          :router -> :leader   # Valid transition: router -> leader
+          :leader -> :leader   # Idempotent: leader stays leader
+          _ -> :router         # Invalid states - will fail validation
         end
+        
+        # Always call transition_state so AshStateMachine can validate
+        transition_state(target_state).(changeset, context)
       end)
     end
 
