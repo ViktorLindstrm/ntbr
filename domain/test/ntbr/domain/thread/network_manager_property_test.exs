@@ -200,7 +200,7 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
       end)
 
       # Verify state
-      devices = Device.by_network(network.id)
+      {:ok, devices} = Device.by_network(network.id)
       valid = length(devices) > 0
 
       Network.destroy(network)
