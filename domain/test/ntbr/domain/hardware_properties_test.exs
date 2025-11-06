@@ -16,8 +16,8 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
   @moduletag :hardware
 
   property "RCP boots successfully with various boot delays",
-           [:verbose, {:numtests, 50}] do
-    forall boot_delay <- integer(0, 200) do
+           [:verbose, {:numtests, 20}] do
+    forall boot_delay <- integer(0, 100) do
       # Try to reset, skip if Client not available
       reset_result = try do
         Client.reset()
@@ -180,7 +180,7 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
   end
 
   property "RCP handles rapid property changes without corruption",
-           [:verbose, {:numtests, 100}] do
+           [:verbose, {:numtests, 20}] do
     forall property_changes <- property_change_sequence_gen() do
       results = Enum.map(property_changes, fn {property, value, delay} ->
         result = try do

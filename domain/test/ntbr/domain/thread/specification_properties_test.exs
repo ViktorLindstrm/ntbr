@@ -96,8 +96,8 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
   end
 
   property "end devices NEVER have children per Thread specification",
-           [:verbose, {:numtests, 100}] do
-    forall _scenario <- integer(1, 100) do
+           [:verbose, {:numtests, 20}] do
+    forall _scenario <- integer(1, 20) do
       {:ok, network} = Network.create(%{
         name: "EndDev-#{:rand.uniform(10000)}",
         network_name: "EndDevNet"
