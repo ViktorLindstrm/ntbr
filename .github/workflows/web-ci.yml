@@ -182,7 +182,8 @@ jobs:
           echo "  - Test cases per property: $PROPCHECK_NUMTESTS"
           echo "  - Search steps for shrinking: $PROPCHECK_SEARCH_STEPS"
           echo "======================================"
-          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+          # Capture test output to log file while still showing in console
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 2>&1 | tee test-output.log || {
             echo ""
             echo "======================================"
             echo "❌ TESTS FAILED"
@@ -193,6 +194,15 @@ jobs:
           echo "======================================"
           echo "✅ ALL TESTS PASSED"
           echo "======================================"
+
+      - name: Upload test logs
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-web-${{ github.run_id }}
+          path: web/test-output.log
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload PropCheck counterexamples
         if: failure()

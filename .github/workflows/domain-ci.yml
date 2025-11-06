@@ -268,6 +268,7 @@ jobs:
           # Capture output to file while still showing in console
           # If TEST_PATTERN is empty, run all tests
           # If TEST_PATTERN contains --only flags, use them for tag-based filtering
+          # Capture test output to log file while still showing in console
           if [ -z "$TEST_PATTERN" ]; then
             mix test test/ntbr/domain/ --formatter ExUnit.CLIFormatter --trace --slowest 10 2>&1 | tee -a "$TEST_OUTPUT_FILE" || {
               echo ""
@@ -303,6 +304,15 @@ jobs:
           path: domain/test-output.log
           if-no-files-found: ignore
           retention-days: 1
+
+      - name: Upload test logs
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-domain-${{ github.run_id }}
+          path: domain/test-output.log
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Upload PropCheck counterexamples
         if: failure()
