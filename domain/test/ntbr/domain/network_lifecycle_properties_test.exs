@@ -329,7 +329,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       
       result = joiner.id in expired_ids
       
-      measure("Timeout (seconds)", timeout_seconds, result)
+      result
     end
   end
 
