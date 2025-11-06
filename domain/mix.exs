@@ -28,8 +28,6 @@ defmodule NTBR.Domain.MixProject do
         "coveralls.html": :test,
         quality: :test
       ],
-      test_paths: ["test"],
-      test_pattern: "*_test.exs",
 
       # Dialyzer
       dialyzer: dialyzer()
@@ -94,8 +92,7 @@ defmodule NTBR.Domain.MixProject do
       {:propcheck, "~> 1.5", only: :test},
       # {:stream_data, "~> 1.1", only: :test},
       {:mox, "~> 1.1", only: :test},
-      {:excoveralls, "~> 0.18", only: :test},
-      {:junit_formatter, "~> 3.3", only: :test}
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 

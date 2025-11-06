@@ -163,7 +163,8 @@ jobs:
           echo "======================================"
           echo "Running Test Suite (Host Target)"
           echo "======================================"
-          mix test --formatter JUnitFormatter --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+          # Capture test output to log file while still showing in console
+          mix test --formatter ExUnit.CLIFormatter --trace --slowest 10 2>&1 | tee test-output.log || {
             echo ""
             echo "======================================"
             echo "❌ TESTS FAILED"
@@ -175,37 +176,12 @@ jobs:
           echo "✅ ALL TESTS PASSED"
           echo "======================================"
 
-      - name: Generate test summary
-        if: always()
-        working-directory: firmware
-        run: |
-          if [ -f "_build/host_test/lib/ntbr_firmware/test-junit-report.xml" ]; then
-            echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            # Extract test statistics from JUnit XML
-            total=$(grep -oP 'tests="\K[0-9]+' _build/host_test/lib/ntbr_firmware/test-junit-report.xml | head -1)
-            failures=$(grep -oP 'failures="\K[0-9]+' _build/host_test/lib/ntbr_firmware/test-junit-report.xml | head -1)
-            errors=$(grep -oP 'errors="\K[0-9]+' _build/host_test/lib/ntbr_firmware/test-junit-report.xml | head -1)
-            skipped=$(grep -oP 'skipped="\K[0-9]+' _build/host_test/lib/ntbr_firmware/test-junit-report.xml | head -1)
-            
-            passed=$((total - failures - errors - skipped))
-            
-            echo "**Firmware Module Test Results (Host Target):**" >> $GITHUB_STEP_SUMMARY
-            echo "- ✅ Passed: $passed" >> $GITHUB_STEP_SUMMARY
-            echo "- ❌ Failed: $failures" >> $GITHUB_STEP_SUMMARY
-            echo "- ⚠️ Errors: $errors" >> $GITHUB_STEP_SUMMARY
-            echo "- ⏭️ Skipped: $skipped" >> $GITHUB_STEP_SUMMARY
-            echo "- 📊 Total: $total" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Upload JUnit test results
+      - name: Upload test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: junit-results-firmware-${{ github.run_id }}
-          path: firmware/_build/host_test/lib/ntbr_firmware/test-junit-report.xml
+          name: test-logs-firmware-${{ github.run_id }}
+          path: firmware/test-output.log
           if-no-files-found: ignore
           retention-days: 30
 

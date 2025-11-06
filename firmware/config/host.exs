@@ -19,15 +19,3 @@ config :nerves_runtime,
        "a.nerves_fw_platform" => "host",
        "a.nerves_fw_version" => "0.0.0"
      }}
-
-# Configure JUnit formatter for test reporting
-if Mix.env() == :test do
-  config :junit_formatter,
-    report_file: "test-junit-report.xml",
-    report_dir: "_build/host_test/lib/ntbr_firmware",
-    print_report_file: true,
-    prepend_project_name?: true,
-    include_filename?: true,
-    include_file_line?: true
-end
-
