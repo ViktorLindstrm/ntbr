@@ -177,7 +177,7 @@ jobs:
           echo "======================================"
 
       - name: Upload test logs
-        if: failure()
+        if: failure() || cancelled()
         uses: actions/upload-artifact@v4
         with:
           name: test-logs-firmware-${{ github.run_id }}

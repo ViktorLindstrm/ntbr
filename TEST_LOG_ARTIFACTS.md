@@ -17,11 +17,11 @@ This approach:
 - **No dependencies**: Uses standard Unix tools, no additional packages needed
 
 ### Artifact Upload
-Each workflow uploads the test log as an artifact **only when tests fail**:
+Each workflow uploads the test log as an artifact **only when tests fail or timeout**:
 
 ```yaml
 - name: Upload test logs
-  if: failure()
+  if: failure() || cancelled()
   uses: actions/upload-artifact@v4
   with:
     name: test-logs-<module>-${{ github.run_id }}
@@ -30,7 +30,11 @@ Each workflow uploads the test log as an artifact **only when tests fail**:
     retention-days: 30
 ```
 
-The `if: failure()` ensures logs are only uploaded when tests fail or time out, reducing storage usage.
+The `if: failure() || cancelled()` ensures logs are uploaded when:
+- Tests fail (exit with non-zero status)
+- Tests timeout (job is cancelled due to timeout-minutes being exceeded)
+
+This reduces storage usage by only keeping logs when debugging is needed.
 
 ## Accessing Test Logs
 
