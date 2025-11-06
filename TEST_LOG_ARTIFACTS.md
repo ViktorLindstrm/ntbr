@@ -17,11 +17,11 @@ This approach:
 - **No dependencies**: Uses standard Unix tools, no additional packages needed
 
 ### Artifact Upload
-Each workflow uploads the test log as an artifact:
+Each workflow uploads the test log as an artifact **only when tests fail**:
 
 ```yaml
 - name: Upload test logs
-  if: always()
+  if: failure()
   uses: actions/upload-artifact@v4
   with:
     name: test-logs-<module>-${{ github.run_id }}
@@ -30,7 +30,7 @@ Each workflow uploads the test log as an artifact:
     retention-days: 30
 ```
 
-The `if: always()` ensures logs are uploaded whether tests pass or fail.
+The `if: failure()` ensures logs are only uploaded when tests fail or time out, reducing storage usage.
 
 ## Accessing Test Logs
 
@@ -39,11 +39,15 @@ GitHub Copilot can access test logs through:
 1. **GitHub Actions API**: Query artifacts for a specific workflow run
 2. **Direct download**: Download artifacts programmatically using the artifact ID
 
+**Note**: Logs are only available when tests fail or time out.
+
 ### For Developers
-Test logs are available in the GitHub Actions UI:
-1. Navigate to the workflow run
+Test logs are available in the GitHub Actions UI when tests fail:
+1. Navigate to the failed workflow run
 2. Scroll to "Artifacts" section
 3. Download `test-logs-<module>-<run_id>`
+
+If tests pass, no log artifacts are uploaded.
 
 ## Modules Covered
 - `core` - Core module tests
