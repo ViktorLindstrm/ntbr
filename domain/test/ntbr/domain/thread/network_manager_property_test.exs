@@ -119,7 +119,7 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
           end)
         end)
 
-      results = Enum.map(tasks, &Task.await(&1, 5000))
+      _results = Enum.map(tasks, &Task.await(&1, 5000))
 
       Network.delete(network)
       # All completed without crashing

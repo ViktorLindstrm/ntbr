@@ -39,7 +39,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       end
       
       # Apply transition sequence and track transition validity
-      {final_state, all_transitions_valid} = Enum.reduce(
+      {final_state, _all_transitions_valid} = Enum.reduce(
         transition_sequence,
         {:detached, true},
         fn transition, {state, valid_so_far} ->
