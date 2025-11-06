@@ -250,12 +250,26 @@ jobs:
             TEST_PATTERN=""
           fi
           echo "======================================"
+          echo ""
+          
+          # Create output file for capturing test results
+          TEST_OUTPUT_FILE="test-output.log"
+          
+          # Print test configuration header to both console and log file
+          {
+            echo "=== Domain Test Configuration ==="
+            echo "PropCheck iterations: $PROPCHECK_NUMTESTS"
+            echo "Search steps: $PROPCHECK_SEARCH_STEPS"
+            echo "================================="
+            echo ""
+          } | tee "$TEST_OUTPUT_FILE"
 
           # Run tests with the determined pattern (tags or all tests)
+          # Capture output to file while still showing in console
           # If TEST_PATTERN is empty, run all tests
           # If TEST_PATTERN contains --only flags, use them for tag-based filtering
           if [ -z "$TEST_PATTERN" ]; then
-            mix test test/ntbr/domain/ --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            mix test test/ntbr/domain/ --formatter ExUnit.CLIFormatter --trace --slowest 10 2>&1 | tee -a "$TEST_OUTPUT_FILE" || {
               echo ""
               echo "======================================"
               echo "❌ TESTS FAILED"
@@ -263,7 +277,7 @@ jobs:
               exit 1
             }
           else
-            mix test test/ntbr/domain/ $TEST_PATTERN --formatter ExUnit.CLIFormatter --trace --slowest 10 || {
+            mix test test/ntbr/domain/ $TEST_PATTERN --formatter ExUnit.CLIFormatter --trace --slowest 10 2>&1 | tee -a "$TEST_OUTPUT_FILE" || {
               echo ""
               echo "======================================"
               echo "❌ TESTS FAILED"
@@ -275,6 +289,20 @@ jobs:
           echo "======================================"
           echo "✅ ALL TESTS PASSED"
           echo "======================================"
+          
+          # Verify log file was created
+          if [ -f "$TEST_OUTPUT_FILE" ]; then
+            echo "Test output captured to $TEST_OUTPUT_FILE ($(wc -l < "$TEST_OUTPUT_FILE") lines)"
+          fi
+
+      - name: Upload test output logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs-domain-${{ github.run_id }}
+          path: domain/test-output.log
+          if-no-files-found: ignore
+          retention-days: 1
 
       - name: Upload PropCheck counterexamples
         if: failure()
