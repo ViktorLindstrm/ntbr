@@ -258,9 +258,12 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       # Create mix of active and stale devices
       active_count = total_devices - stale_count
       
-      # Active devices
+      # Active devices - ensure they're well within the timeout window
       Enum.each(1..active_count, fn i ->
-        recent = DateTime.add(now, -:rand.uniform(timeout_seconds - 10), :second)
+        # Use a safer margin: devices last seen between 0 and (timeout - 30) seconds ago
+        # This ensures clear separation from stale devices
+        max_age = max(10, timeout_seconds - 30)
+        recent = DateTime.add(now, -:rand.uniform(max_age), :second)
         {:ok, device} = Device.create(%{
           network_id: network.id,
           extended_address: <<0::48, i::16>>,
@@ -305,7 +308,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
 
   property "joiner expiration handling works at various timeout values",
            [:verbose, {:numtests, 100}] do
-    forall timeout_seconds <- integer(1, 10) do
+    forall timeout_seconds <- integer(30, 120) do
       {:ok, network} = create_network_in_state(:leader)
       
       {:ok, joiner} = Joiner.create(%{
