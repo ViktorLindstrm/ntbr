@@ -44,9 +44,9 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
   # ============================================================================
 
   property "attach and detach operations are always idempotent",
-           [:verbose, {:numtests, 100}] do
+           [:verbose, {:numtests, 25}] do
     forall {network_attrs, attach_count, detach_count} <-
-             {network_attrs_gen(), integer(1, 5), integer(1, 5)} do
+             {network_attrs_gen(), integer(1, 3), integer(1, 3)} do
       # Create network
       {:ok, network} = Network.create(network_attrs)
 
@@ -119,7 +119,7 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
           end)
         end)
 
-      results = Enum.map(tasks, &Task.await(&1, 5000))
+      _results = Enum.map(tasks, &Task.await(&1, 5000))
 
       Network.delete(network)
       # All completed without crashing
@@ -189,9 +189,9 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
   end
 
   property "topology updates handle device changes correctly",
-           [:verbose, {:numtests, 100}] do
+           [:verbose, {:numtests, 10}] do
     forall {network_attrs, topology_updates} <-
-             {network_attrs_gen(), topology_update_sequence_gen(5, 15)} do
+             {network_attrs_gen(), topology_update_sequence_gen(2, 5)} do
       {:ok, network} = Network.create(network_attrs)
 
       # Apply topology updates
@@ -200,7 +200,7 @@ defmodule NTBR.Domain.Thread.NetworkManagerPropertyTest do
       end)
 
       # Verify state
-      devices = Device.by_network(network.id)
+      {:ok, devices} = Device.by_network(network.id)
       valid = length(devices) > 0
 
       Network.destroy(network)

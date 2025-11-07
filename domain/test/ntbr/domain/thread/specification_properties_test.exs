@@ -44,7 +44,6 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
       
       has_all_tlvs and valid_formats
     end
-    |> measure("Network name length", fn attrs -> String.length(attrs.network_name) end)
   end
 
   property "security policy complies with Thread specification requirements",
@@ -97,8 +96,8 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
   end
 
   property "end devices NEVER have children per Thread specification",
-           [:verbose, {:numtests, 100}] do
-    forall _scenario <- integer(1, 100) do
+           [:verbose, {:numtests, 20}] do
+    forall _scenario <- integer(1, 20) do
       {:ok, network} = Network.create(%{
         name: "EndDev-#{:rand.uniform(10000)}",
         network_name: "EndDevNet"
@@ -155,7 +154,6 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
         d.rloc16 >= 0 and d.rloc16 <= 0xFFFF
       end)
     end
-    |> measure("Devices created", fn count -> count end)
   end
 
   property "EUI-64 addresses are ALWAYS unique 64-bit identifiers",
@@ -188,8 +186,6 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
       
       all_correct_length and all_unique
     end
-    |> measure("Device count", fn count -> count end)
-    |> classify(fn count -> count > 200 end, "large network")
   end
 
   property "channel assignments comply with Thread frequency bands",

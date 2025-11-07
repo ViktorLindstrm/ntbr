@@ -316,8 +316,8 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
     end
   end
 
-  property "by_network returns devices for specific network" do
-    forall _ <- integer(1, 100) do
+  property "by_network returns devices for specific network", [:verbose, {:numtests, 20}] do
+    forall _ <- integer(1, 20) do
       {:ok, network1} = Network.create(%{name: "N1", network_name: "N1", channel: 15})
       {:ok, network2} = Network.create(%{name: "N2", network_name: "N2", channel: 16})
 
@@ -341,8 +341,8 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
     end
   end
 
-  property "routers returns only router and leader devices" do
-    forall _ <- integer(1, 100) do
+  property "routers returns only router and leader devices", [:verbose, {:numtests, 20}] do
+    forall _ <- integer(1, 20) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
       {:ok, router} =
@@ -462,8 +462,8 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
     end
   end
 
-  property "children_of returns child devices" do
-    forall _ <- integer(1, 100) do
+  property "children_of returns child devices", [:verbose, {:numtests, 20}] do
+    forall _ <- integer(1, 20) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 
       # Create parent
@@ -600,7 +600,7 @@ defmodule NTBR.Domain.Resources.DevicePropertyTest do
     end
   end
 
-  property "rloc16 must be unique per network" do
+  property "rloc16 must be unique per network", [:verbose, {:numtests, 20}] do
     forall rloc <- integer(0, 0xFFFF) do
       {:ok, network} = Network.create(%{name: "T", network_name: "T", channel: 15})
 

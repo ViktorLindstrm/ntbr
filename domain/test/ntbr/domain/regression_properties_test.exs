@@ -43,16 +43,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
           false
       end
     end
-    |> aggregate(:name_length, fn name ->
-      len = String.length(name)
-      cond do
-        len == 0 -> :empty
-        len < 5 -> :very_short
-        len < 10 -> :short
-        len <= 16 -> :valid_length
-        true -> :too_long
-      end
-    end)
   end
 
   property "PSKD validation catches ALL special characters",
@@ -79,13 +69,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
         _ -> match?({:error, _}, result)
       end
     end
-    |> aggregate(:character_type, fn pskd ->
-      cond do
-        String.match?(pskd, ~r/[!@#$%^&*()]/) -> :special_chars
-        String.match?(pskd, ~r/^[0-9A-Z]+$/i) -> :valid_chars
-        true -> :other
-      end
-    end)
   end
 
   property "device parent validation prevents self-reference",
@@ -125,14 +108,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       # Should wrap correctly
       frame.tid == rem(tid_input, 16)
     end
-    |> aggregate(:tid_category, fn tid ->
-      cond do
-        tid <= 15 -> :valid_range
-        tid <= 31 -> :first_overflow
-        tid <= 63 -> :second_overflow
-        true -> :multiple_overflow
-      end
-    end)
   end
 
   property "network with ANY invalid configuration fails gracefully",
@@ -149,16 +124,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       # Should return error, not crash
       match?({:error, _}, result)
     end
-    |> aggregate(:invalid_type, fn attrs ->
-      cond do
-        attrs.name == "" -> :empty_name
-        String.length(attrs.name) > 100 -> :name_too_long
-        not is_integer(attrs.channel) -> :invalid_channel
-        attrs.channel < 11 -> :channel_too_low
-        attrs.channel > 26 -> :channel_too_high
-        true -> :other
-      end
-    end)
   end
 
   property "joiner timeout ALWAYS prevents indefinite waiting",
@@ -182,7 +147,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       not is_nil(joiner.expires_at) and
       DateTime.diff(joiner.expires_at, joiner.started_at, :second) == timeout
     end
-    |> measure("Timeout (seconds)", fn t -> t end)
   end
 
   property "device topology NEVER creates cycles under ANY operations",
@@ -202,7 +166,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       devices = Device.by_network!(network.id)
       not has_topology_cycles?(devices)
     end
-    |> measure("Operations", &length/1)
   end
 
   # Generators
