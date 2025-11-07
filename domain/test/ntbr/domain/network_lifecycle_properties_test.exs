@@ -289,9 +289,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
         Device.update(device, %{last_seen: old})
       end)
       
-      # Get and cleanup stale devices
-      stale = Device.stale_devices!(timeout_seconds: timeout_seconds)
-      |> Enum.filter(&(&1.network_id == network.id))
+      # Get and cleanup stale devices - pass network_id to filter correctly
+      stale = Device.stale_devices!(timeout_seconds: timeout_seconds, network_id: network.id)
       
       Enum.each(stale, &Device.deactivate/1)
       

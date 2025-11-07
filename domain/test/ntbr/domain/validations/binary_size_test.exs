@@ -105,7 +105,7 @@ defmodule NTBR.Domain.Validations.BinarySizeTest do
   describe "validate/2 with non-binary values" do
     test "returns error for string value" do
       # In Elixir, strings ARE binaries, so this tests size validation
-      # "not a binary" is 13 bytes, expected is 16 bytes
+      # "not a binary" is 12 bytes, expected is 16 bytes
       changeset = make_changeset(%{network_key: "not a binary"})
       opts = [field: :network_key, size: 16]
 
@@ -113,7 +113,7 @@ defmodule NTBR.Domain.Validations.BinarySizeTest do
                BinarySize.validate(changeset, opts)
 
       assert message =~ "must be exactly 16 bytes"
-      assert message =~ "got 13 bytes"
+      assert message =~ "got 12 bytes"
     end
 
     test "returns error for integer value" do
