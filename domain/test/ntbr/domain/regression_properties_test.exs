@@ -166,7 +166,6 @@ defmodule NTBR.Domain.Test.RegressionPropertiesTest do
       devices = Device.by_network!(network.id)
       not has_topology_cycles?(devices)
     end
-    |> measure("Operations", &length/1)
   end
 
   # Generators

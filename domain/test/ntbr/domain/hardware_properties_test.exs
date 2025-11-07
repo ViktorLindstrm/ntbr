@@ -48,14 +48,6 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
         true
       end
     end
-    |> collect(:boot_delay_range, fn delay ->
-      cond do
-        delay < 50 -> :very_short
-        delay < 100 -> :short
-        delay < 150 -> :medium
-        true -> :long
-      end
-    end)
   end
 
   property "RCP handles reset during various network states",
@@ -109,7 +101,6 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
         true
       end
     end
-    |> aggregate(:network_state, fn state -> state end)
   end
 
   property "channel switching works at various speeds",
@@ -131,14 +122,6 @@ defmodule NTBR.Domain.Test.HardwarePropertiesTest do
 
       Enum.all?(results)
     end
-    |> aggregate(:switch_speed, fn {_, delay} ->
-      cond do
-        delay == 0 -> :immediate
-        delay < 10 -> :fast
-        delay < 50 -> :medium
-        true -> :slow
-      end
-    end)
   end
 
   property "network formation timing varies but always succeeds",
