@@ -118,6 +118,24 @@ defmodule NTBR.Domain.Thread.NetworkManager do
   end
 
   @doc """
+  Processes topology update with given router and child lists.
+  
+  This is used for testing or manual topology updates without RCP.
+  Updates the device table with the provided device information.
+  
+  ## Parameters
+  - `network_id` - The ID of the network to update
+  - `routers` - List of router device maps
+  - `children` - List of child device maps
+  """
+  @spec process_topology_update(String.t(), list(), list()) :: :ok
+  def process_topology_update(network_id, routers, children) do
+    update_devices(network_id, routers, :router)
+    update_devices(network_id, children, :end_device)
+    :ok
+  end
+
+  @doc """
   Gets the current state of the NetworkManager.
   
   Returns a map containing:
@@ -304,10 +322,20 @@ defmodule NTBR.Domain.Thread.NetworkManager do
 
       case Network.by_id(state.network_id) do
         {:ok, network} ->
-          case domain_role do
-            :leader -> Network.promote!(network)
-            :router -> Network.promote!(network)
-            :child -> Network.demote!(network)
+          # Only transition if the network is not already in the desired state
+          case {network.state, domain_role} do
+            # Already in desired state - no-op
+            {:leader, :leader} -> :ok
+            {:router, :router} -> :ok
+            {:child, :child} -> :ok
+            {:detached, :detached} -> :ok
+            
+            # Valid state transitions
+            {_, :leader} -> Network.promote!(network)  # promote will handle child->router->leader
+            {_, :router} -> Network.promote!(network)  # promote from child to router
+            {_, :child} -> Network.demote!(network)    # demote from router/leader to child
+            {_, :detached} -> Network.detach!(network) # detach to detached
+            
             _ -> :ok
           end
 

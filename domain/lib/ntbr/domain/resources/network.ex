@@ -212,7 +212,10 @@ defmodule NTBR.Domain.Resources.Network do
 
     transitions do
       transition(:attach, from: [:detached, :disabled], to: :child)
+      # Promote has multiple transitions for flexibility
       transition(:promote, from: :child, to: :router)
+      transition(:promote, from: :router, to: :leader)
+      transition(:promote, from: :leader, to: :leader)  # Idempotent: promoting leader keeps it leader
       transition(:become_leader, from: [:router, :child], to: :leader)
       transition(:demote, from: [:router, :leader], to: :child)
       transition(:detach, from: [:child, :router, :leader], to: :detached)
@@ -367,9 +370,24 @@ defmodule NTBR.Domain.Resources.Network do
     end
 
     update :promote do
-      description("Promote from child to router role")
+      description("Promote from child to router role, or router to leader")
       require_atomic?(false)
-      change(transition_state(:router))
+      
+      # Dynamically determine target state based on current state
+      change(fn changeset, context ->
+        current_state = Ash.Changeset.get_attribute(changeset, :state)
+        
+        # Determine the target state for this promotion
+        target_state = case current_state do
+          :child -> :router    # Valid transition: child -> router
+          :router -> :leader   # Valid transition: router -> leader
+          :leader -> :leader   # Idempotent: leader stays leader
+          _ -> :router         # Invalid states - will fail validation
+        end
+        
+        # Always call transition_state so AshStateMachine can validate
+        transition_state(target_state).(changeset, context)
+      end)
     end
 
     update :become_leader do
