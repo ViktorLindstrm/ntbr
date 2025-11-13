@@ -602,8 +602,15 @@ defmodule NTBR.Domain.Test.AdvancedSecurityPropertiesTest do
       original_dataset = Network.operational_dataset(network)
       original_policy = original_dataset.security_policy
 
-      # Attacker tries to downgrade security by extending rotation time
-      # (longer rotation = weaker security as compromised keys stay valid longer)
+      # Attacker tries to downgrade security by extending rotation_time
+      # Thread 1.3 Specification (Section 8.10.1.15):
+      #   - rotation_time MUST be > 0 (cannot disable rotation)
+      #   - rotation_time MUST be <= 168 hours (max 1 week)
+      # 
+      # Security Rationale: Longer rotation periods = weaker security because
+      # compromised keys remain valid for extended periods. An attacker might
+      # try to increase rotation_time to extend the validity of a leaked key.
+      # The Thread spec's 168-hour maximum limits this attack vector.
       weakened_rotation = original_policy.rotation_time * 10
 
       # Try to update with weakened security parameters

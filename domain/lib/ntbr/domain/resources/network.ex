@@ -25,6 +25,26 @@ defmodule NTBR.Domain.Resources.Network do
   - Security policy management
   - Mesh-local prefix generation
 
+  ## Security Policy
+
+  The network's security policy includes the `rotation_time` parameter which 
+  controls how often the Thread network rotates its network key. According to 
+  the Thread 1.3 specification (section 8.10.1.15), `rotation_time` must meet
+  the following constraints:
+
+  - **Must be greater than 0 hours** - A value of 0 would disable key rotation,
+    which is not permitted by the Thread specification
+  - **Must be less than or equal to 168 hours (1 week)** - This maximum ensures
+    timely key rotation for security purposes
+
+  **Rationale:** Regular network key rotation is a fundamental security requirement
+  in Thread networks. It limits the window of vulnerability if a network key is 
+  compromised. The Thread specification enforces a minimum rotation frequency 
+  (maximum 168-hour period) to ensure that compromised keys have a limited 
+  validity window.
+
+  **Thread 1.3 Specification Reference:** Section 8.10.1.15 - Security Policy TLV
+
   ## Examples
 
       # Create a network with auto-generated credentials
@@ -114,6 +134,18 @@ defmodule NTBR.Domain.Resources.Network do
     attribute :security_policy, :map do
       allow_nil?(false)
 
+      # Security policy configuration per Thread 1.3 specification
+      # 
+      # rotation_time: Network key rotation period in hours
+      #   - MUST be > 0 (Thread 1.3 spec section 8.10.1.15)
+      #   - MUST be <= 168 hours (1 week maximum per Thread 1.3 spec)
+      #   - Setting to 0 would disable rotation (not permitted by spec)
+      # 
+      # Rationale: Regular key rotation limits the window of compromise if a 
+      # network key is leaked. The 168-hour maximum ensures keys are rotated 
+      # at least weekly for security.
+      # 
+      # Thread 1.3 Specification Reference: Section 8.10.1.15 - Security Policy TLV
       default(%{
         # Hours (Thread spec: max 1 week = 168 hours)
         rotation_time: 168,
