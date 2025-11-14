@@ -232,7 +232,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # Verify name is stored safely
-          retrieved = Network.by_id!(network.id)
+          retrieved = Network.read!(network.id)
           is_binary(retrieved.name)
         
         {:error, _} ->
@@ -330,15 +330,15 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
           try do
             case transition do
               :attach -> 
-                net = Network.by_id!(network.id)
+                net = Network.read!(network.id)
                 Network.attach(net)
               
               :detach ->
-                net = Network.by_id!(network.id)
+                net = Network.read!(network.id)
                 Network.detach(net)
               
               :promote ->
-                net = Network.by_id!(network.id)
+                net = Network.read!(network.id)
                 Network.promote(net)
             end
           rescue
@@ -350,7 +350,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       results = Enum.map(tasks, &Task.await(&1, 5000))
       
       # System should maintain consistency
-      final_network = Network.by_id!(network.id)
+      final_network = Network.read!(network.id)
       valid_final_state = final_network.state in [:detached, :child, :router, :leader]
       
       # No crashes
@@ -551,7 +551,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
           # For now, check it didn't just blindly accept
           updated.device_type == :end_device or
           # If it changed, verify network state allows it
-          Network.by_id!(network.id).state == :leader
+          Network.read!(network.id).state == :leader
         
         {:error, _} ->
           true
@@ -653,7 +653,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
       case result do
         {:ok, network} ->
           # If accepted, should be safely stored
-          retrieved = Network.by_id!(network.id)
+          retrieved = Network.read!(network.id)
           String.valid?(retrieved.name)
         
         {:error, _} ->
@@ -675,6 +675,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
   # Generators
   # ===========================================================================
 
+  @spec brute_force_attack_gen() :: PropCheck.type()
   defp brute_force_attack_gen do
     let {network_id, attempt_count} <- {integer(1, 10000), integer(10, 100)} do
       attempts = Enum.map(1..attempt_count, fn _i ->
@@ -688,6 +689,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     end
   end
 
+  @spec concurrent_auth_attack_gen() :: PropCheck.type()
   defp concurrent_auth_attack_gen do
     let {network_id, attacker_count} <- {integer(1, 10000), integer(10, 100)} do
       attackers = Enum.map(1..attacker_count, fn i ->
@@ -700,6 +702,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     end
   end
 
+  @spec replay_attack_gen() :: PropCheck.type()
   defp replay_attack_gen do
     let [
       replay_count <- integer(5, 20),
@@ -712,6 +715,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     end
   end
 
+  @spec sql_injection_gen() :: PropCheck.type()
   defp sql_injection_gen do
     oneof([
       "'; DROP TABLE networks; --",
@@ -725,6 +729,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     ])
   end
 
+  @spec command_injection_gen() :: PropCheck.type()
   defp command_injection_gen do
     oneof([
       "; rm -rf /",
@@ -736,6 +741,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     ])
   end
 
+  @spec frame_injection_gen() :: PropCheck.type()
   defp frame_injection_gen do
     let count <- integer(10, 50) do
       Enum.map(1..count, fn _ ->
@@ -749,14 +755,14 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     end
   end
 
+  @spec rapid_state_change_gen() :: PropCheck.type()
   defp rapid_state_change_gen do
     let count <- integer(20, 100) do
-      Enum.map(1..count, fn _ ->
-        oneof([:attach, :detach, :promote])
-      end)
+      vector(count, oneof([:attach, :detach, :promote]))
     end
   end
 
+  @spec resource_exhaustion_gen() :: PropCheck.type()
   defp resource_exhaustion_gen do
     let [
       target <- oneof([:memory, :cpu]),
@@ -769,6 +775,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     end
   end
 
+  @spec timing_attack_gen() :: {String.t(), list(String.t())}
   defp timing_attack_gen do
     correct_pskd = "CORRECT123456"
     
@@ -784,6 +791,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     {correct_pskd, attack_pskds}
   end
 
+  @spec weak_credential_gen() :: PropCheck.type()
   defp weak_credential_gen do
     oneof([
       "12345",           # Too short
@@ -796,6 +804,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     ])
   end
 
+  @spec unauthorized_join_gen() :: PropCheck.type()
   defp unauthorized_join_gen do
     %{
       eui64: :crypto.strong_rand_bytes(8),
@@ -803,6 +812,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     }
   end
 
+  @spec malformed_frame_gen() :: PropCheck.type()
   defp malformed_frame_gen do
     oneof([
       <<>>,                                    # Empty
@@ -814,6 +824,7 @@ defmodule NTBR.Domain.Test.SecurityChaosPropertiesTest do
     ])
   end
 
+  @spec unicode_attack_gen() :: PropCheck.type()
   defp unicode_attack_gen do
     oneof([
       "test\u0000hidden",              # Null byte injection

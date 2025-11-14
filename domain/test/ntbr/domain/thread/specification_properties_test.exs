@@ -42,9 +42,11 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
         dataset.channel >= 11 and dataset.channel <= 26 and
         String.length(dataset.network_name) <= 16
       
-      has_all_tlvs and valid_formats
+      result = has_all_tlvs and valid_formats
+      
+      result
+      |> measure("Network name length", String.length(network_attrs.network_name))
     end
-    |> measure("Network name length", fn attrs -> String.length(attrs.network_name) end)
   end
 
   property "security policy complies with Thread specification requirements",
@@ -151,11 +153,13 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
       end)
       
       # All RLOC16s must be in valid range
-      Enum.all?(devices, fn d -> 
+      result = Enum.all?(devices, fn d -> 
         d.rloc16 >= 0 and d.rloc16 <= 0xFFFF
       end)
+      
+      result
+      |> measure("Devices created", device_count)
     end
-    |> measure("Devices created", fn count -> count end)
   end
 
   property "EUI-64 addresses are ALWAYS unique 64-bit identifiers",
@@ -186,10 +190,12 @@ defmodule NTBR.Domain.Test.ThreadSpecificationPropertiesTest do
       # All unique
       all_unique = length(eui64s) == length(Enum.uniq(eui64s))
       
-      all_correct_length and all_unique
+      result = all_correct_length and all_unique
+      
+      result
+      |> measure("Device count", device_count)
+      |> classify(device_count > 200, "large network")
     end
-    |> measure("Device count", fn count -> count end)
-    |> classify(fn count -> count > 200 end, "large network")
   end
 
   property "channel assignments comply with Thread frequency bands",

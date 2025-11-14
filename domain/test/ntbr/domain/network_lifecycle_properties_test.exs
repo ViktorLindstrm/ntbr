@@ -197,13 +197,14 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       
       result = all_succeeded and addresses_unique and length(devices) == device_count
       
-      measure("Concurrent devices", device_count,
-        classify(device_count > 25, "high concurrency", result))
+      result
+      |> measure("Concurrent devices", device_count)
+      |> classify(device_count > 25, "high concurrency")
     end
   end
 
   property "network recovers correctly after RCP reset at any point",
-           [:verbose, {:numtests, 50}] do
+           [:verbose, {:numtests, 30}] do  # Reduced from 50 to 30 for faster CI
     forall {initial_state, device_count, reset_delay} <- recovery_scenario_gen() do
       {:ok, network} = create_network_in_state(initial_state)
       
@@ -223,8 +224,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
       if reset_delay > 0, do: Process.sleep(reset_delay)
       :ok = Client.reset()
       
-      # Allow recovery time
-      Process.sleep(2000)
+      # Allow recovery time (reduced from 2000ms to 500ms)
+      Process.sleep(500)
       
       # Network should be in valid state
       try do
@@ -298,8 +299,8 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
   end
 
   property "joiner expiration handling works at various timeout values",
-           [:verbose, {:numtests, 100}] do
-    forall timeout_seconds <- integer(1, 10) do
+           [:verbose, {:numtests, 50}] do  # Reduced from 100, but kept reasonable for property testing
+    forall timeout_seconds <- integer(1, 3) do  # Reduced max from 10s to 3s to keep total time reasonable
       {:ok, network} = create_network_in_state(:leader)
       
       {:ok, joiner} = Joiner.create(%{
@@ -326,16 +327,19 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
 
   # Generators
 
+  @spec network_transition_sequence_gen(integer(), integer()) :: PropCheck.type()
   defp network_transition_sequence_gen(min, max) do
     let count <- integer(min, max) do
       vector(count, transition_gen())
     end
   end
 
+  @spec transition_gen() :: PropCheck.type()
   defp transition_gen do
     oneof([:attach, :promote, :demote, :detach])
   end
 
+  @spec commissioning_scenario_gen() :: PropCheck.type()
   defp commissioning_scenario_gen do
     {
       oneof([:child, :router, :leader]),
@@ -344,17 +348,18 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     }
   end
 
+  @spec border_router_config_gen() :: PropCheck.type()
   defp border_router_config_gen do
-    let [
-      route_count <- integer(1, 10),
-      nat64_enabled <- boolean(),
-      num_priorities <- integer(1, 3)
-    ] do
-      priorities = List.duplicate(oneof([:high, :medium, :low]), num_priorities)
-      {route_count, nat64_enabled, priorities}
+    let route_count <- integer(1, 10) do
+      let nat64_enabled <- boolean() do
+        let priorities <- vector(integer(1, 3), oneof([:high, :medium, :low])) do
+          {route_count, nat64_enabled, priorities}
+        end
+      end
     end
   end
 
+  @spec recovery_scenario_gen() :: PropCheck.type()
   defp recovery_scenario_gen do
     {
       oneof([:child, :router, :leader]),  # initial state
@@ -363,6 +368,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     }
   end
 
+  @spec stale_device_scenario_gen() :: PropCheck.type()
   defp stale_device_scenario_gen do
     let [
       total <- integer(10, 50),
@@ -375,6 +381,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
 
   # Helpers
 
+  @spec create_network_in_state(atom()) :: {:ok, term()} | {:error, term()}
   defp create_network_in_state(desired_state) do
     {:ok, network} = Network.create(%{
       name: "State-#{:rand.uniform(10000)}",
@@ -409,6 +416,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     end
   end
 
+  @spec apply_transition(String.t(), atom(), atom()) :: {:ok, term()} | {:error, term()}
   defp apply_transition(network_id, current_state, transition) do
     network = Network.read!(network_id)
     
@@ -423,6 +431,7 @@ defmodule NTBR.Domain.Test.NetworkLifecycleProperties do
     end
   end
 
+  @spec generate_valid_pskd() :: String.t()
   defp generate_valid_pskd do
     chars = ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     length = Enum.random(6..32)

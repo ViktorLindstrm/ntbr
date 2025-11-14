@@ -28,17 +28,12 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
 
       # Should be < 10 microseconds per frame
       time_per_frame = time_us / count
-      time_per_frame < 10
+      result = time_per_frame < 10
+      
+      result
+      |> measure("Frames encoded", count)
+      |> measure("Time per frame (μs)", Float.round(time_per_frame, 2))
     end
-    |> measure("Frames encoded", fn count -> count end)
-    |> measure("Time per frame (μs)", fn count ->
-      {time_us, _} = :timer.tc(fn ->
-        Enum.each(1..count, fn i ->
-          Frame.encode(Frame.new(:reset, <<>>, tid: 0))
-        end)
-      end)
-      Float.round(time_us / count, 2)
-    end)
   end
 
   property "frame decoding throughput scales linearly",
@@ -54,9 +49,11 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
       end)
 
       time_per_frame = time_us / count
-      time_per_frame < 10
+      result = time_per_frame < 10
+      
+      result
+      |> measure("Frames decoded", count)
     end
-    |> measure("Frames decoded", fn count -> count end)
   end
 
   property "network creation time scales linearly with quantity",
@@ -73,10 +70,12 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
 
       # Should be < 10ms per network
       time_per_network = time_us / count
-      time_per_network < 10_000
+      result = time_per_network < 10_000
+      
+      result
+      |> measure("Networks created", count)
+      |> classify(count > 100, "large batch")
     end
-    |> measure("Networks created", fn count -> count end)
-    |> classify(fn count -> count > 100 end, "large batch")
   end
 
   property "device creation scales linearly up to 1000 devices",
@@ -102,9 +101,11 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
 
       # Should be < 500 microseconds per device
       time_per_device = time_us / count
-      time_per_device < 500
+      result = time_per_device < 500
+      
+      result
+      |> measure("Devices created", count)
     end
-    |> measure("Devices created", fn count -> count end)
   end
 
   property "device query performance remains constant regardless of network size",
@@ -134,24 +135,12 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
 
       # Should be < 100ms regardless of size
       time_ms = time_us / 1000
-      time_ms < 100 and length(devices) == count
+      result = time_ms < 100 and length(devices) == count
+      
+      result
+      |> measure("Device count", count)
+      |> measure("Query time (ms)", Float.round(time_ms, 2))
     end
-    |> measure("Device count", fn count -> count end)
-    |> measure("Query time (ms)", fn count ->
-      {:ok, network} = Network.create(%{name: "Q", network_name: "QNet"})
-      Enum.each(1..count, fn i ->
-        Device.create(%{
-          network_id: network.id,
-          extended_address: <<0::48, i::16>>,
-          rloc16: i,
-          device_type: :end_device,
-          link_quality: 2,
-          rssi: -50
-        })
-      end)
-      {time_us, _} = :timer.tc(fn -> Device.by_network!(network.id) end)
-      Float.round(time_us / 1000, 2)
-    end)
   end
 
   property "memory usage grows linearly with resource count",
@@ -171,9 +160,11 @@ defmodule NTBR.Domain.Test.PerformancePropertiesTest do
       memory_per_network = (memory_after - memory_before) / count
 
       # Should be < 50KB per network
-      memory_per_network < 50_000
+      result = memory_per_network < 50_000
+      
+      result
+      |> measure("Networks created", count)
     end
-    |> measure("Networks created", fn count -> count end)
   end
 
   property "concurrent operations complete within reasonable time bounds",
